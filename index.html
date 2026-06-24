@@ -183,18 +183,18 @@
     </div>
     <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:2rem;padding:0 0.25rem">과목을 선택하고 OX 퀴즈를 시작하세요</p>
     <div class="courses">
-      <a href="algebra/" class="course-card card-algebra">
+      <div class="course-card card-algebra" onclick="goToCourse('algebra/')">
         <h2>대수</h2>
         <div class="arrow">→</div>
-      </a>
-      <a href="calculus/" class="course-card card-calculus">
+      </div>
+      <div class="course-card card-calculus" onclick="goToCourse('calculus/')">
         <h2>공통수학1</h2>
         <div class="arrow">→</div>
-      </a>
-      <a href="probability/" class="course-card card-prob">
+      </div>
+      <div class="course-card card-prob" onclick="goToCourse('probability/')">
         <h2>확률과 통계</h2>
         <div class="arrow">→</div>
-      </a>
+      </div>
       <div class="course-card card-coming1">
         <h2>공통수학2</h2>
         <div class="soon">준비 중</div>
@@ -275,6 +275,23 @@
       if (pw !== ADMIN_PASSWORD) { showError('선생님 코드가 올바르지 않습니다'); return; }
       localStorage.setItem('mathstart_user', JSON.stringify({ role: 'admin', name }));
       showApp(`${name} 선생님`);
+    }
+
+    function goToCourse(path) {
+      const saved = localStorage.getItem('mathstart_user');
+      if (!saved) return;
+      const u = JSON.parse(saved);
+      if (u.role === 'student') {
+        localStorage.setItem('ox_quiz_student_name', u.name);
+        localStorage.setItem('ox_quiz_student_phone', u.phone);
+        localStorage.setItem('ox_quiz_auto_login', 'true');
+        localStorage.removeItem('ox_quiz_admin_auto_login');
+      } else {
+        localStorage.setItem('ox_quiz_admin_name', u.name);
+        localStorage.setItem('ox_quiz_admin_auto_login', 'true');
+        localStorage.removeItem('ox_quiz_auto_login');
+      }
+      window.location.href = path;
     }
 
     function doLogout() {
