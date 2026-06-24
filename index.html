@@ -417,16 +417,23 @@
       showScreen('login-screen');
     }
 
-    // ── 구글 로그인 ─────────────────────────────────────────
+    // ── 구글 로그인 (리디렉트 방식 — 모바일/Safari 호환) ───────
     document.getElementById('googleLoginBtn').addEventListener('click', async () => {
       const provider = new firebase.auth.GoogleAuthProvider();
       try {
-        await auth.signInWithPopup(provider);
+        showScreen('loading-screen');
+        await auth.signInWithRedirect(provider);
       } catch(e) {
-        if (e.code !== 'auth/popup-closed-by-user') {
-          showError('login-error', '로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
-        }
+        showError('login-error', '로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+        showScreen('login-screen');
       }
+    });
+
+    // ── 리디렉트 로그인 결과 처리 ──────────────────────────────
+    auth.getRedirectResult().catch((e) => {
+      console.error('리디렉트 오류:', e);
+      showError('login-error', '로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      showScreen('login-screen');
     });
 
     // ── Auth 상태 감지 ──────────────────────────────────────
