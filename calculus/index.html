@@ -13,6 +13,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -67,6 +68,7 @@
     }
     const db = firebase.firestore();
     const storage = firebase.storage();
+    const auth = firebase.auth();
 
     let offlineDB;
 
@@ -2004,6 +2006,7 @@
 
     // 로그아웃
     function logout() {
+      firebase.auth().signOut().catch(() => {});
       localStorage.removeItem('ox_quiz_student_name');
       localStorage.removeItem('ox_quiz_student_phone');
       localStorage.removeItem('ox_quiz_teacher_name');
@@ -2256,6 +2259,24 @@
           await saveData(newData);
         }
         
+        // 구글 계정과 연결 (구글 로그인된 경우)
+        try {
+          const gUser = firebase.auth().currentUser;
+          if (gUser) {
+            const userRef = db.collection('users').doc(gUser.uid);
+            const userDoc = await userRef.get();
+            if (!userDoc.exists || !userDoc.data().linkedStudentId) {
+              await userRef.set({
+                role: 'student',
+                name: state.studentName.trim(),
+                phone: p,
+                teacherName: state.teacherName.trim(),
+                linkedStudentId: id
+              }, { merge: true });
+            }
+          }
+        } catch(e) { console.warn('구글 계정 연결 실패:', e); }
+
         state.isLoggedIn = true;
         state.userType = 'student';
         state.loading = false;
@@ -2305,6 +2326,21 @@
 
       await loadAdminStudents(state.adminName.trim());
       
+      // 구글 계정과 역할 저장 (구글 로그인된 경우)
+      try {
+        const gUser = firebase.auth().currentUser;
+        if (gUser) {
+          const userRef = db.collection('users').doc(gUser.uid);
+          const userDoc = await userRef.get();
+          if (!userDoc.exists || !userDoc.data().role) {
+            await userRef.set({
+              role: 'admin',
+              name: state.adminName.trim()
+            }, { merge: true });
+          }
+        }
+      } catch(e) { console.warn('구글 역할 저장 실패:', e); }
+
       state.isLoggedIn = true;
       state.userType = 'admin';
       state.loading = false;
@@ -5278,64 +5314,100 @@
     // 앱 초기화
     (async function initApp() {
       await initIndexedDB();
-      
-      const autoLoginInfo = checkAutoLogin();
-      if (autoLoginInfo) {
-        console.log('자동 로그인 실행:', autoLoginInfo.type);
-        
-        if (autoLoginInfo.type === 'student') {
-          // 학생 자동 로그인
-          state.loading = true;
-          render();
-          
+
+      // Firebase Auth 상태 확인 후 자동 로그인
+      firebase.auth().onAuthStateChanged(async (user) => {
+        if (user) {
           try {
-            const p = state.phone.replace(/[^0-9]/g, '');
-            const id = `${state.studentName.trim()}_${p}`;
-            state.uid = id;
-            
-            await loadData(id);
-            
-            // 퇴원생 체크
-            const studentData = state.allStudentData[state.studentName];
-            if (studentData && studentData.status === 'withdrawn') {
-              state.loading = false;
-              alert('퇴원 처리된 학생은 로그인할 수 없습니다.\n담당 선생님께 문의해주세요.');
-              logout();
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+              const userData = userDoc.data();
+              if (userData.role === 'admin' && !state.isLoggedIn) {
+                state.userType = 'admin';
+                state.adminName = userData.name || user.displayName || '';
+                state.isLoggedIn = true;
+                state.loading = true;
+                render();
+                try { await loadAdminStudents(state.adminName); } catch(e) {}
+                state.loading = false;
+                render();
+                return;
+              } else if (userData.role === 'student' && userData.linkedStudentId && !state.isLoggedIn) {
+                state.userType = 'student';
+                state.studentName = userData.name || user.displayName || '';
+                state.phone = userData.phone || '';
+                state.teacherName = userData.teacherName || '';
+                state.uid = userData.linkedStudentId;
+                state.isLoggedIn = true;
+                state.loading = true;
+                render();
+                try { await loadData(userData.linkedStudentId); } catch(e) {}
+                state.loading = false;
+                render();
+                return;
+              }
+            }
+            // 역할 미설정 → 루트로 이동
+            if (!state.isLoggedIn) {
+              window.location.href = '/';
               return;
             }
-            
-            state.isLoggedIn = true;
-            state.userType = 'student';
-            state.loading = false;
-            render();
-          } catch (error) {
-            console.error('학생 자동 로그인 오류:', error);
-            state.loading = false;
-            alert('자동 로그인 중 오류가 발생했습니다.');
-            logout();
-          }
-        } else if (autoLoginInfo.type === 'admin') {
-          // 관리자 자동 로그인
-          state.loading = true;
-          render();
-          
-          try {
-            await loadAdminStudents(autoLoginInfo.name);
-            state.isLoggedIn = true;
-            state.userType = 'admin';
-            state.loading = false;
-            render();
-          } catch (error) {
-            console.error('관리자 자동 로그인 오류:', error);
-            state.loading = false;
-            alert('자동 로그인 중 오류가 발생했습니다.');
-            logout();
+          } catch(e) {
+            console.error('Auth 확인 오류:', e);
           }
         }
-      } else {
-        render();
-      }
-      
+
+        // 구글 로그인 없는 경우: 기존 자동 로그인 체크
+        if (!state.isLoggedIn) {
+          const autoLoginInfo = checkAutoLogin();
+          if (autoLoginInfo) {
+            if (autoLoginInfo.type === 'student') {
+              state.loading = true;
+              render();
+              try {
+                const p = state.phone.replace(/[^0-9]/g, '');
+                const id = `${state.studentName.trim()}_${p}`;
+                state.uid = id;
+                await loadData(id);
+                const studentData = state.allStudentData[state.studentName];
+                if (studentData && studentData.status === 'withdrawn') {
+                  state.loading = false;
+                  alert('퇴원 처리된 학생은 로그인할 수 없습니다.\n담당 선생님께 문의해주세요.');
+                  logout();
+                  return;
+                }
+                state.isLoggedIn = true;
+                state.userType = 'student';
+                state.loading = false;
+                render();
+              } catch (error) {
+                console.error('학생 자동 로그인 오류:', error);
+                state.loading = false;
+                alert('자동 로그인 중 오류가 발생했습니다.');
+                logout();
+              }
+            } else if (autoLoginInfo.type === 'admin') {
+              state.loading = true;
+              render();
+              try {
+                await loadAdminStudents(autoLoginInfo.name);
+                state.isLoggedIn = true;
+                state.userType = 'admin';
+                state.loading = false;
+                render();
+              } catch (error) {
+                console.error('관리자 자동 로그인 오류:', error);
+                state.loading = false;
+                alert('자동 로그인 중 오류가 발생했습니다.');
+                logout();
+              }
+            }
+          } else {
+            render();
+          }
+        }
+      });
+
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./service_worker.js')
           .then(registration => {
