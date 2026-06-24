@@ -121,19 +121,15 @@
       border-color: var(--accent);
       box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
-    .course-card .icon { font-size: 2.5rem; margin-bottom: 1.25rem; }
-    .course-card .label {
-      font-size: 0.72rem; font-weight: 600;
-      letter-spacing: 0.1em; text-transform: uppercase;
-      color: var(--accent); margin-bottom: 0.4rem;
-    }
-    .course-card h2 { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.6rem; line-height: 1.3; }
-    .course-card p { font-size: 0.9rem; color: #9ca3af; line-height: 1.6; flex: 1; }
-    .course-card .arrow { margin-top: 1.5rem; font-size: 1.2rem; color: var(--accent); transition: transform 0.18s; }
+    .course-card h2 { font-size: 1.3rem; font-weight: 700; }
+    .course-card .arrow { margin-top: 1.25rem; font-size: 1.2rem; color: var(--accent); transition: transform 0.18s; }
     .course-card:hover .arrow { transform: translateX(4px); }
+    .course-card .soon { margin-top: 1.25rem; font-size: 0.78rem; color: #4b5563; }
     .card-algebra  { --accent: #f97316; }
     .card-calculus { --accent: #3b82f6; }
     .card-prob     { --accent: #a855f7; }
+    .card-coming1  { --accent: #10b981; opacity: 0.5; cursor: default; }
+    .card-coming2  { --accent: #ec4899; opacity: 0.5; cursor: default; }
 
     .hidden { display: none !important; }
   </style>
@@ -188,26 +184,25 @@
     <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:2rem;padding:0 0.25rem">과목을 선택하고 OX 퀴즈를 시작하세요</p>
     <div class="courses">
       <a href="algebra/" class="course-card card-algebra">
-        <div class="icon">📐</div>
-        <div class="label">공통수학 2</div>
         <h2>대수</h2>
-        <p>다항식, 방정식과 부등식, 경우의 수 등 대수 단원 OX 퀴즈</p>
         <div class="arrow">→</div>
       </a>
       <a href="calculus/" class="course-card card-calculus">
-        <div class="icon">∫</div>
-        <div class="label">공통수학 1</div>
         <h2>공통수학1</h2>
-        <p>수열, 함수의 극한, 미분·적분 등 공통수학1 단원 OX 퀴즈</p>
         <div class="arrow">→</div>
       </a>
       <a href="probability/" class="course-card card-prob">
-        <div class="icon">🎲</div>
-        <div class="label">확률과 통계</div>
         <h2>확률과 통계</h2>
-        <p>순열·조합, 확률, 통계적 추정 등 확률과 통계 단원 OX 퀴즈</p>
         <div class="arrow">→</div>
       </a>
+      <div class="course-card card-coming1">
+        <h2>공통수학2</h2>
+        <div class="soon">준비 중</div>
+      </div>
+      <div class="course-card card-coming2">
+        <h2>미적분1</h2>
+        <div class="soon">준비 중</div>
+      </div>
     </div>
   </div>
 
