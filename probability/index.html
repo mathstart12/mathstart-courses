@@ -4530,9 +4530,6 @@
                   <h2 class="text-xl font-bold text-white">${category.name}</h2>
                   <p class="text-sm text-gray-400 mt-1 font-medium">테마 선택</p>
                 </div>
-                <button id="resultsBtn" class="flex items-center px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold text-white transition-all border border-gray-700 transform hover:scale-105 active:scale-95">
-                  ${icon('barChart', 'mr-2', 18)}학습 기록
-                </button>
               </div>
               
               ${category.chapterInfo ? `
@@ -4628,18 +4625,7 @@
       `;
 
       document.getElementById('backBtn').addEventListener('click', () => {
-        if (state.selectedStudent) {
-          sessionStorage.setItem('ox_return_student_id', state.selectedStudent.id);
-          sessionStorage.setItem('ox_return_student_name', state.selectedStudent.studentName || '');
-        }
         state.selectedCategory = null;
-        state.selectedStudent = null;
-        window.location.href = '/';
-      });
-
-      document.getElementById('resultsBtn').addEventListener('click', () => {
-        state.showResults = true;
-        state.recordSelectedCategory = state.selectedCategory; // 현재 선택된 카테고리를 학습 기록용으로 설정
         render();
       });
 
