@@ -369,7 +369,16 @@
       if (role === 'admin') {
         document.getElementById('app-content').innerHTML = '<p style="color:#9ca3af;font-size:0.9rem">학생 목록을 불러오는 중...</p>';
         await loadAllStudents();
-        renderStudentList();
+        // 과목 앱에서 뒤로가기로 돌아온 경우 해당 학생 과목 선택 화면으로 복원
+        const returnId = sessionStorage.getItem('ox_return_student_id');
+        const returnName = sessionStorage.getItem('ox_return_student_name');
+        if (returnId && returnName) {
+          sessionStorage.removeItem('ox_return_student_id');
+          sessionStorage.removeItem('ox_return_student_name');
+          selectStudent(returnId, returnName);
+        } else {
+          renderStudentList();
+        }
       } else {
         renderCourseGrid('과목을 선택하고 OX 퀴즈를 시작하세요');
       }
