@@ -2706,7 +2706,7 @@
       state.autoLogin = false;
       state.adminStudents = [];
       state.selectedStudent = null;
-      render();
+      window.location.href = '/';
     }
 
     // Firebase 함수
@@ -5030,7 +5030,7 @@
       document.getElementById('backBtn').addEventListener('click', () => {
         state.selectedStudent = null;
         state.showStudentRecords = false;
-        render();
+        window.location.href = '/';
       });
 
       document.querySelectorAll('.cat-btn').forEach(btn => {
@@ -5229,7 +5229,8 @@
 
       document.getElementById('backBtn').addEventListener('click', () => {
         state.selectedCategory = null;
-        render();
+        state.selectedStudent = null;
+        window.location.href = '/';
       });
 
       document.getElementById('resultsBtn').addEventListener('click', () => {
