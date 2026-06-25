@@ -327,9 +327,12 @@
         allStudents = [];
         snap.forEach(doc => {
           const d = doc.data();
-          if (d.status !== 'withdrawn') {
-            allStudents.push({ id: doc.id, name: d.studentName || d.name || doc.id, phone: d.phone || '' });
-          }
+          // 관리자(선생님) 문서 제외, 퇴원생 제외
+          if (d.isAdmin === true) return;
+          if (d.status === 'withdrawn') return;
+          const name = d.studentName || '';
+          if (!name) return; // 이름 없는 문서 제외
+          allStudents.push({ id: doc.id, name, phone: d.phone || '' });
         });
         allStudents.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
       } catch(e) {
