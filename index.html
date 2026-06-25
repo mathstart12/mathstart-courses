@@ -172,7 +172,7 @@
     </div>
   </div>
 
-  <!-- 과목 선택 화면 -->
+  <!-- 앱 화면 (학생: 과목선택 / 선생님: 학생선택→과목선택) -->
   <div id="app-screen" class="hidden">
     <div class="app-header">
       <h1><span>MathStart</span> 수학 학습</h1>
@@ -181,29 +181,7 @@
         <button class="btn-logout" onclick="doLogout()">로그아웃</button>
       </div>
     </div>
-    <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:2rem;padding:0 0.25rem">과목을 선택하고 OX 퀴즈를 시작하세요</p>
-    <div class="courses">
-      <div class="course-card card-algebra" onclick="goToCourse('algebra/')">
-        <h2>대수</h2>
-        <div class="arrow">→</div>
-      </div>
-      <div class="course-card card-calculus" onclick="goToCourse('calculus/')">
-        <h2>공통수학1</h2>
-        <div class="arrow">→</div>
-      </div>
-      <div class="course-card card-prob" onclick="goToCourse('probability/')">
-        <h2>확률과 통계</h2>
-        <div class="arrow">→</div>
-      </div>
-      <div class="course-card card-coming1">
-        <h2>공통수학2</h2>
-        <div class="soon">준비 중</div>
-      </div>
-      <div class="course-card card-coming2">
-        <h2>미적분1</h2>
-        <div class="soon">준비 중</div>
-      </div>
-    </div>
+    <div id="app-content"></div>
   </div>
 
   <script>
@@ -259,7 +237,7 @@
           return;
         }
         localStorage.setItem('mathstart_user', JSON.stringify({ role: 'student', name, phone }));
-        showApp(`${name} 학생`);
+        showApp(`${name} 학생`, 'student');
       } catch(e) {
         showError('오류가 발생했습니다. 다시 시도해주세요.');
       } finally {
@@ -274,7 +252,90 @@
       if (!name) { showError('이름을 입력해주세요'); return; }
       if (pw !== ADMIN_PASSWORD) { showError('선생님 코드가 올바르지 않습니다'); return; }
       localStorage.setItem('mathstart_user', JSON.stringify({ role: 'admin', name }));
-      showApp(`${name} 선생님`);
+      showApp(`${name} 선생님`, 'admin');
+    }
+
+    const COURSES = [
+      { path: 'algebra/',     title: '대수',        cls: 'card-algebra'  },
+      { path: 'calculus/',    title: '공통수학1',   cls: 'card-calculus' },
+      { path: 'probability/', title: '확률과 통계', cls: 'card-prob'     },
+      { path: null,           title: '공통수학2',   cls: 'card-coming1'  },
+      { path: null,           title: '미적분1',     cls: 'card-coming2'  },
+    ];
+
+    let selectedStudentId = null;
+    let selectedStudentName = null;
+    let allStudents = [];
+
+    function renderCourseGrid(subTitle) {
+      const content = document.getElementById('app-content');
+      const backBtn = selectedStudentId
+        ? `<button onclick="renderStudentList()" style="background:none;border:none;color:#9ca3af;font-size:0.85rem;font-family:inherit;cursor:pointer;margin-bottom:1.5rem;padding:0">← 학생 목록으로</button><br>`
+        : '';
+      content.innerHTML = `
+        ${backBtn}
+        <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:1.5rem">${subTitle}</p>
+        <div class="courses">
+          ${COURSES.map(c => c.path
+            ? `<div class="course-card ${c.cls}" onclick="goToCourse('${c.path}')"><h2>${c.title}</h2><div class="arrow">→</div></div>`
+            : `<div class="course-card ${c.cls}"><h2>${c.title}</h2><div class="soon">준비 중</div></div>`
+          ).join('')}
+        </div>`;
+    }
+
+    function renderStudentList() {
+      selectedStudentId = null;
+      selectedStudentName = null;
+      const content = document.getElementById('app-content');
+      content.innerHTML = `
+        <div style="margin-bottom:1.5rem">
+          <input id="studentSearch" class="input-field" type="text" placeholder="학생 이름 검색..." oninput="filterStudents()" style="margin-bottom:0"/>
+        </div>
+        <div id="studentGrid" class="courses"></div>`;
+      renderStudentGrid(allStudents);
+    }
+
+    function filterStudents() {
+      const q = document.getElementById('studentSearch').value.trim().toLowerCase();
+      const filtered = q ? allStudents.filter(s => s.name.toLowerCase().includes(q)) : allStudents;
+      renderStudentGrid(filtered);
+    }
+
+    function renderStudentGrid(students) {
+      const grid = document.getElementById('studentGrid');
+      if (!students.length) {
+        grid.innerHTML = '<p style="color:#6b7280;font-size:0.9rem">검색 결과가 없습니다.</p>';
+        return;
+      }
+      grid.innerHTML = students.map(s => `
+        <div class="course-card card-algebra" onclick="selectStudent('${s.id}','${s.name}')" style="cursor:pointer">
+          <h2 style="font-size:1.1rem">${s.name}</h2>
+          <p style="font-size:0.8rem;color:#6b7280;margin-top:0.4rem">${s.phone || ''}</p>
+          <div class="arrow">→</div>
+        </div>`).join('');
+    }
+
+    function selectStudent(id, name) {
+      selectedStudentId = id;
+      selectedStudentName = name;
+      renderCourseGrid(`${name} 학생의 과목을 선택하세요`);
+    }
+
+    async function loadAllStudents() {
+      try {
+        const snap = await db.collection('oral-test-students').get();
+        allStudents = [];
+        snap.forEach(doc => {
+          const d = doc.data();
+          if (d.status !== 'withdrawn') {
+            allStudents.push({ id: doc.id, name: d.studentName || d.name || doc.id, phone: d.phone || '' });
+          }
+        });
+        allStudents.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+      } catch(e) {
+        console.error('학생 목록 로드 실패:', e);
+        allStudents = [];
+      }
     }
 
     function goToCourse(path) {
@@ -286,16 +347,36 @@
         localStorage.setItem('ox_quiz_student_phone', u.phone);
         localStorage.setItem('ox_quiz_auto_login', 'true');
         localStorage.removeItem('ox_quiz_admin_auto_login');
+        localStorage.removeItem('ox_quiz_preselect_student');
       } else {
         localStorage.setItem('ox_quiz_admin_name', u.name);
         localStorage.setItem('ox_quiz_admin_auto_login', 'true');
         localStorage.removeItem('ox_quiz_auto_login');
+        if (selectedStudentId) {
+          localStorage.setItem('ox_quiz_preselect_student', selectedStudentId);
+        }
       }
       window.location.href = path;
     }
 
+    async function showApp(displayText, role) {
+      document.getElementById('userBadge').textContent = displayText;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      if (role === 'admin') {
+        document.getElementById('app-content').innerHTML = '<p style="color:#9ca3af;font-size:0.9rem">학생 목록을 불러오는 중...</p>';
+        await loadAllStudents();
+        renderStudentList();
+      } else {
+        renderCourseGrid('과목을 선택하고 OX 퀴즈를 시작하세요');
+      }
+    }
+
     function doLogout() {
       localStorage.removeItem('mathstart_user');
+      selectedStudentId = null;
+      selectedStudentName = null;
+      allStudents = [];
       document.getElementById('app-screen').classList.add('hidden');
       document.getElementById('login-screen').classList.remove('hidden');
       document.getElementById('login-error').classList.add('hidden');
@@ -307,7 +388,8 @@
       try {
         const u = JSON.parse(saved);
         const label = u.role === 'admin' ? `${u.name} 선생님` : `${u.name} 학생`;
-        showApp(label);
+        const role2 = u.role;
+        showApp(label, role2);
       } catch(e) {
         localStorage.removeItem('mathstart_user');
       }
