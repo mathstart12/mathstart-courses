@@ -2284,6 +2284,18 @@
       }
     }
 
+
+    async function applyPreselectStudent() {
+      const preselectId = localStorage.getItem('ox_quiz_preselect_student');
+      if (!preselectId) return;
+      localStorage.removeItem('ox_quiz_preselect_student');
+      try {
+        const doc = await db.collection('oral-test-students').doc(preselectId).get();
+        if (doc.exists) {
+          state.selectedStudent = { id: doc.id, ...doc.data() };
+        }
+      } catch(e) { console.warn('preselect 학생 로드 실패:', e); }
+    }
     async function handleAdminLogin() {
       if (!state.adminName.trim()) {
         alert('관리자 이름을 입력해주세요.');
@@ -2325,6 +2337,7 @@
       }
 
       await loadAdminStudents(state.adminName.trim());
+      await applyPreselectStudent();
       
       // 구글 계정과 역할 저장 (구글 로그인된 경우)
       try {
@@ -5391,6 +5404,7 @@
               render();
               try {
                 await loadAdminStudents(autoLoginInfo.name);
+                await applyPreselectStudent();
                 state.isLoggedIn = true;
                 state.userType = 'admin';
                 state.loading = false;
