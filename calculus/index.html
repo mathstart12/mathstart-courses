@@ -4347,6 +4347,10 @@
       });
 
       document.getElementById('backBtn').addEventListener('click', () => {
+        if (state.selectedStudent) {
+          sessionStorage.setItem('ox_return_student_id', state.selectedStudent.id);
+          sessionStorage.setItem('ox_return_student_name', state.selectedStudent.studentName || '');
+        }
         state.selectedStudent = null;
         state.showStudentRecords = false;
         window.location.href = '/';
