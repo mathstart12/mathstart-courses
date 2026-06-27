@@ -4362,9 +4362,14 @@
                     <p class="text-sm text-gray-400">학습 기록</p>
                   </div>
                 </div>
-                <button id="logoutBtn" class="px-5 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-white transition-all transform hover:scale-105 active:scale-95">
-                  로그아웃
-                </button>
+                <div class="flex items-center gap-3">
+                  <button id="backToCoursesBtn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-white transition-all transform hover:scale-105 active:scale-95 text-sm">
+                    ← 과목 선택
+                  </button>
+                  <button id="logoutBtn" class="px-5 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-white transition-all transform hover:scale-105 active:scale-95">
+                    로그아웃
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -4929,6 +4934,10 @@
       }, 50);
 
       // 로그아웃 버튼
+      document.getElementById('backToCoursesBtn').addEventListener('click', () => {
+        window.location.href = '/';
+      });
+
       document.getElementById('logoutBtn').addEventListener('click', () => {
         state.isLoggedIn = false;
         state.userType = null;
