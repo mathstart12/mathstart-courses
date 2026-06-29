@@ -1540,30 +1540,33 @@
 
       const ctx = canvas.getContext('2d');
       let isDrawing = false;
-      let currentStroke = null; // 현재 그리고 있는 획
+      let currentStroke = null;
+
+      canvas.style.touchAction = 'pan-y pan-x';
+
+      function isPenOrMouse(e) {
+        return e.pointerType === 'pen' || e.pointerType === 'mouse';
+      }
 
       function getCoordinates(e) {
         const rect = canvas.getBoundingClientRect();
-        if (e.touches && e.touches[0]) {
-          return {x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top};
-        }
         return {x: e.clientX - rect.left, y: e.clientY - rect.top};
       }
 
       function startDrawing(e) {
-        if (e.cancelable) e.preventDefault();
+        if (!isPenOrMouse(e)) return;
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
         const coords = getCoordinates(e);
         isDrawing = true;
 
         if (state.isEraserMode) {
-          // 지우개 모드: 드래그 시작 - 첫 위치에서도 지우기
           const strokeIndex = findStrokeAtPoint(coords.x, coords.y);
           if (strokeIndex !== -1) {
             state.canvasStrokes.splice(strokeIndex, 1);
             redrawCanvas();
           }
         } else {
-          // 그리기 모드: 새 획 시작
           currentStroke = {
             points: [{x: coords.x, y: coords.y}],
             color: state.penColor,
@@ -1573,22 +1576,18 @@
       }
 
       function draw(e) {
-        if (!isDrawing) return;
-        if (e.cancelable) e.preventDefault();
+        if (!isDrawing || !isPenOrMouse(e)) return;
+        e.preventDefault();
         const coords = getCoordinates(e);
 
         if (state.isEraserMode) {
-          // 지우개 모드: 지나가는 획을 계속 지우기
           const strokeIndex = findStrokeAtPoint(coords.x, coords.y);
           if (strokeIndex !== -1) {
             state.canvasStrokes.splice(strokeIndex, 1);
             redrawCanvas();
           }
         } else {
-          // 그리기 모드: 현재 획에 점 추가
           currentStroke.points.push({x: coords.x, y: coords.y});
-
-          // 즉시 화면에 그리기 (미리보기)
           const lastPoint = currentStroke.points[currentStroke.points.length - 2];
           ctx.strokeStyle = currentStroke.color;
           ctx.lineWidth = currentStroke.width;
@@ -1600,26 +1599,19 @@
       }
 
       function stopDrawing(e) {
-        if (isDrawing) {
-          if (e.cancelable) e.preventDefault();
-          isDrawing = false;
-
-          // 그리기 모드에서만 완성된 획 저장
-          if (!state.isEraserMode && currentStroke && currentStroke.points.length > 0) {
-            state.canvasStrokes.push(currentStroke);
-          }
-          currentStroke = null;
+        if (!isDrawing) return;
+        isDrawing = false;
+        if (!state.isEraserMode && currentStroke && currentStroke.points.length > 0) {
+          state.canvasStrokes.push(currentStroke);
         }
+        currentStroke = null;
       }
 
-      canvas.addEventListener('touchstart', startDrawing, {passive: false});
-      canvas.addEventListener('touchmove', draw, {passive: false});
-      canvas.addEventListener('touchend', stopDrawing, {passive: false});
-      canvas.addEventListener('touchcancel', stopDrawing, {passive: false});
-      canvas.addEventListener('mousedown', startDrawing);
-      canvas.addEventListener('mousemove', draw);
-      canvas.addEventListener('mouseup', stopDrawing);
-      canvas.addEventListener('mouseleave', stopDrawing);
+      canvas.addEventListener('pointerdown', startDrawing);
+      canvas.addEventListener('pointermove', draw);
+      canvas.addEventListener('pointerup', stopDrawing);
+      canvas.addEventListener('pointercancel', stopDrawing);
+      canvas.addEventListener('pointerleave', stopDrawing);
     }
 
     // 특정 좌표에 있는 획 찾기
