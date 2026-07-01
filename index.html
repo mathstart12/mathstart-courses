@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MathStart — 수학 학습</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background: #0a0a0f;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .card-box {
+      background: #141420;
+      border: 1px solid #1f1f2e;
+      border-radius: 1.25rem;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+    .card-logo {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, #f97316, #fb923c);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 1.25rem;
+      box-shadow: 0 8px 24px rgba(249,115,22,0.4);
+      font-size: 1.8rem;
+    }
+    .card-title { font-size: 1.6rem; font-weight: 800; text-align: center; margin-bottom: 0.3rem; }
+    .card-title span { color: #f97316; }
+    .card-sub { text-align: center; color: #6b7280; font-size: 0.9rem; margin-bottom: 2rem; }
+
+    .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+    .role-card {
+      display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+      padding: 1.25rem 1rem;
+      background: #0a0a0f; border: 2px solid #1f1f2e;
+      border-radius: 1rem; cursor: pointer;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .role-card:hover { transform: translateY(-2px); }
+    .role-card.active { border-color: #f97316; background: rgba(249,115,22,0.06); }
+    .role-card .role-icon { font-size: 1.75rem; }
+    .role-card .role-label { font-size: 0.88rem; font-weight: 700; }
+
+    .input-field {
+      width: 100%; padding: 0.75rem 1rem;
+      background: #0a0a0f; border: 1px solid #1f1f2e;
+      border-radius: 0.75rem; color: #fff;
+      font-size: 0.9rem; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+      margin-bottom: 0.75rem;
+    }
+    .input-field:focus { border-color: #f97316; }
+    .input-field::placeholder { color: #4b5563; }
+
+    .btn-primary {
+      width: 100%; padding: 0.85rem;
+      background: linear-gradient(135deg, #f97316, #fb923c);
+      border: none; border-radius: 0.75rem;
+      color: #fff; font-size: 0.95rem; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .error-msg { color: #f87171; font-size: 0.82rem; text-align: center; margin-top: 0.75rem; }
+
+    /* 과목 선택 화면 */
+    #app-screen { width: 100%; max-width: 900px; }
+    .app-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 2.5rem; padding: 0 0.25rem;
+    }
+    .app-header h1 { font-size: 1.4rem; font-weight: 800; }
+    .app-header h1 span { color: #f97316; }
+    .user-info { display: flex; align-items: center; gap: 0.75rem; }
+    .user-badge {
+      background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3);
+      border-radius: 2rem; padding: 0.3rem 0.85rem;
+      font-size: 0.82rem; color: #fb923c; font-weight: 600;
+    }
+    .btn-logout {
+      padding: 0.4rem 0.85rem;
+      background: #1f1f2e; border: 1px solid #374151;
+      border-radius: 0.5rem; color: #9ca3af;
+      font-size: 0.78rem; font-family: inherit; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-logout:hover { background: #374151; color: #fff; }
+
+    .courses {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.5rem;
+    }
+    .course-card {
+      display: flex; flex-direction: column;
+      background: #141420; border: 1px solid #1f1f2e;
+      border-radius: 1.25rem; padding: 2rem 1.75rem;
+      text-decoration: none; color: inherit;
+      transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+    }
+    .course-card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .course-card h2 { font-size: 1.3rem; font-weight: 700; }
+    .course-card .arrow { margin-top: 1.25rem; font-size: 1.2rem; color: var(--accent); transition: transform 0.18s; }
+    .course-card:hover .arrow { transform: translateX(4px); }
+    .course-card .soon { margin-top: 1.25rem; font-size: 0.78rem; color: #4b5563; }
+    .card-algebra  { --accent: #f97316; }
+    .card-calculus { --accent: #3b82f6; }
+    .card-prob     { --accent: #a855f7; }
+    .card-coming1  { --accent: #10b981; }
+    .card-coming2  { --accent: #ec4899; opacity: 0.5; cursor: default; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- 로그인 화면 -->
+  <div id="login-screen">
+    <div class="card-box">
+      <div class="card-logo">📚</div>
+      <h1 class="card-title"><span>MathStart</span></h1>
+      <p class="card-sub">구두테스트 학습 플랫폼</p>
+
+      <div class="role-grid">
+        <div class="role-card active" id="roleStudent" onclick="selectRole('student')">
+          <span class="role-icon">🎒</span>
+          <span class="role-label">학생</span>
+        </div>
+        <div class="role-card" id="roleTeacher" onclick="selectRole('teacher')">
+          <span class="role-icon">📋</span>
+          <span class="role-label">선생님</span>
+        </div>
+      </div>
+
+      <!-- 학생 폼 -->
+      <div id="student-form">
+        <input class="input-field" id="studentName" type="text" placeholder="이름" />
+        <input class="input-field" id="studentPhone" type="tel" placeholder="전화번호 (- 없이, 예: 01012345678)" />
+        <button class="btn-primary" id="studentLoginBtn" onclick="loginStudent()">로그인</button>
+      </div>
+
+      <!-- 선생님 폼 -->
+      <div id="teacher-form" class="hidden">
+        <input class="input-field" id="teacherName" type="text" placeholder="이름" />
+        <input class="input-field" id="teacherPw" type="password" placeholder="선생님 코드" />
+        <button class="btn-primary" onclick="loginTeacher()">로그인</button>
+      </div>
+
+      <p id="login-error" class="error-msg hidden"></p>
+    </div>
+  </div>
+
+  <!-- 앱 화면 (학생: 과목선택 / 선생님: 학생선택→과목선택) -->
+  <div id="app-screen" class="hidden">
+    <div class="app-header">
+      <h1><span>MathStart</span> 수학 학습</h1>
+      <div class="user-info">
+        <span class="user-badge" id="userBadge"></span>
+        <button class="btn-logout" onclick="doLogout()">로그아웃</button>
+      </div>
+    </div>
+    <div id="app-content"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCtS_FVILl8WC_ikOWw0Hgl8MSjdH-jSGc",
+      authDomain: "ox-quiz-math.firebaseapp.com",
+      projectId: "ox-quiz-math",
+      storageBucket: "ox-quiz-math.firebasestorage.app",
+      messagingSenderId: "1065273366803",
+      appId: "1:1065273366803:web:49d4f836f185af67d1e2e6"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const ADMIN_PASSWORD = "teacher2025";
+    let currentRole = 'student';
+
+    function selectRole(role) {
+      currentRole = role;
+      document.getElementById('roleStudent').classList.toggle('active', role === 'student');
+      document.getElementById('roleTeacher').classList.toggle('active', role === 'teacher');
+      document.getElementById('student-form').classList.toggle('hidden', role !== 'student');
+      document.getElementById('teacher-form').classList.toggle('hidden', role !== 'teacher');
+      document.getElementById('login-error').classList.add('hidden');
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('login-error');
+      el.textContent = msg;
+      el.classList.remove('hidden');
+    }
+
+    function showApp(displayText) {
+      document.getElementById('userBadge').textContent = displayText;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+    }
+
+    async function loginStudent() {
+      const name = document.getElementById('studentName').value.trim();
+      const phone = document.getElementById('studentPhone').value.replace(/[^0-9]/g, '');
+      if (!name) { showError('이름을 입력해주세요'); return; }
+      if (phone.length < 10) { showError('전화번호를 올바르게 입력해주세요'); return; }
+
+      const btn = document.getElementById('studentLoginBtn');
+      btn.disabled = true;
+      btn.textContent = '확인 중...';
+
+      try {
+        const doc = await db.collection('oral-test-students').doc(`${name}_${phone}`).get();
+        if (!doc.exists) {
+          showError('등록된 학생 정보가 없습니다. 이름과 전화번호를 확인해주세요.');
+          return;
+        }
+        localStorage.setItem('mathstart_user', JSON.stringify({ role: 'student', name, phone }));
+        showApp(`${name} 학생`, 'student');
+      } catch(e) {
+        showError('오류가 발생했습니다. 다시 시도해주세요.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '로그인';
+      }
+    }
+
+    function loginTeacher() {
+      const name = document.getElementById('teacherName').value.trim();
+      const pw = document.getElementById('teacherPw').value;
+      if (!name) { showError('이름을 입력해주세요'); return; }
+      if (pw !== ADMIN_PASSWORD) { showError('선생님 코드가 올바르지 않습니다'); return; }
+      localStorage.setItem('mathstart_user', JSON.stringify({ role: 'admin', name }));
+      showApp(`${name} 선생님`, 'admin');
+    }
+
+    const COURSES = [
+      { path: 'algebra/',     title: '대수',        cls: 'card-algebra'  },
+      { path: 'calculus/',    title: '공통수학1',   cls: 'card-calculus' },
+      { path: 'probability/', title: '확률과 통계', cls: 'card-prob'     },
+      { path: 'commonmath2/', title: '공통수학2',   cls: 'card-coming1'  },
+      { path: null,           title: '미적분1',     cls: 'card-coming2'  },
+    ];
+
+    let selectedStudentId = null;
+    let selectedStudentName = null;
+    let allStudents = [];
+
+    function renderCourseGrid(subTitle) {
+      const content = document.getElementById('app-content');
+      const backBtn = selectedStudentId
+        ? `<button onclick="renderStudentList()" style="background:none;border:none;color:#9ca3af;font-size:0.85rem;font-family:inherit;cursor:pointer;margin-bottom:1.5rem;padding:0">← 학생 목록으로</button><br>`
+        : '';
+      content.innerHTML = `
+        ${backBtn}
+        <p style="color:#9ca3af;font-size:0.9rem;margin-bottom:1.5rem">${subTitle}</p>
+        <div class="courses">
+          ${COURSES.map(c => c.path
+            ? `<div class="course-card ${c.cls}" onclick="goToCourse('${c.path}')"><h2>${c.title}</h2><div class="arrow">→</div></div>`
+            : `<div class="course-card ${c.cls}"><h2>${c.title}</h2><div class="soon">준비 중</div></div>`
+          ).join('')}
+        </div>`;
+    }
+
+    function renderStudentList() {
+      selectedStudentId = null;
+      selectedStudentName = null;
+      const content = document.getElementById('app-content');
+      content.innerHTML = `
+        <div style="margin-bottom:1.5rem">
+          <input id="studentSearch" class="input-field" type="text" placeholder="학생 이름 검색..." oninput="filterStudents()" style="margin-bottom:0"/>
+        </div>
+        <div id="studentGrid" class="courses"></div>`;
+      renderStudentGrid(allStudents);
+    }
+
+    function filterStudents() {
+      const q = document.getElementById('studentSearch').value.trim().toLowerCase();
+      const filtered = q ? allStudents.filter(s => s.name.toLowerCase().includes(q)) : allStudents;
+      renderStudentGrid(filtered);
+    }
+
+    function renderStudentGrid(students) {
+      const grid = document.getElementById('studentGrid');
+      if (!students.length) {
+        grid.innerHTML = '<p style="color:#6b7280;font-size:0.9rem">검색 결과가 없습니다.</p>';
+        return;
+      }
+      grid.innerHTML = students.map(s => `
+        <div class="course-card card-algebra" onclick="selectStudent('${s.id}','${s.name}')" style="cursor:pointer">
+          <h2 style="font-size:1.1rem">${s.name}</h2>
+          <p style="font-size:0.8rem;color:#6b7280;margin-top:0.4rem">${s.phone || ''}</p>
+          <div class="arrow">→</div>
+        </div>`).join('');
+    }
+
+    function selectStudent(id, name) {
+      selectedStudentId = id;
+      selectedStudentName = name;
+      renderCourseGrid(`${name} 학생의 과목을 선택하세요`);
+    }
+
+    async function loadAllStudents() {
+      try {
+        const snap = await db.collection('oral-test-students').get();
+        allStudents = [];
+        snap.forEach(doc => {
+          const d = doc.data();
+          // 관리자(선생님) 문서 제외, 퇴원생 제외
+          if (d.isAdmin === true) return;
+          if (d.status === 'withdrawn') return;
+          const name = d.studentName || '';
+          if (!name) return; // 이름 없는 문서 제외
+          allStudents.push({ id: doc.id, name, phone: d.phone || '' });
+        });
+        allStudents.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
+      } catch(e) {
+        console.error('학생 목록 로드 실패:', e);
+        allStudents = [];
+      }
+    }
+
+    function goToCourse(path) {
+      const saved = localStorage.getItem('mathstart_user');
+      if (!saved) return;
+      const u = JSON.parse(saved);
+      if (u.role === 'student') {
+        localStorage.setItem('ox_quiz_student_name', u.name);
+        localStorage.setItem('ox_quiz_student_phone', u.phone);
+        localStorage.setItem('ox_quiz_auto_login', 'true');
+        localStorage.removeItem('ox_quiz_admin_auto_login');
+        localStorage.removeItem('ox_quiz_preselect_student');
+      } else {
+        localStorage.setItem('ox_quiz_admin_name', u.name);
+        localStorage.setItem('ox_quiz_admin_auto_login', 'true');
+        localStorage.removeItem('ox_quiz_auto_login');
+        if (selectedStudentId) {
+          localStorage.setItem('ox_quiz_preselect_student', selectedStudentId);
+        }
+      }
+      window.location.href = path;
+    }
+
+    async function showApp(displayText, role) {
+      document.getElementById('userBadge').textContent = displayText;
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-screen').classList.remove('hidden');
+      if (role === 'admin') {
+        document.getElementById('app-content').innerHTML = '<p style="color:#9ca3af;font-size:0.9rem">학생 목록을 불러오는 중...</p>';
+        await loadAllStudents();
+        // 과목 앱에서 뒤로가기로 돌아온 경우 해당 학생 과목 선택 화면으로 복원
+        const returnId = sessionStorage.getItem('ox_return_student_id');
+        const returnName = sessionStorage.getItem('ox_return_student_name');
+        if (returnId && returnName) {
+          sessionStorage.removeItem('ox_return_student_id');
+          sessionStorage.removeItem('ox_return_student_name');
+          selectStudent(returnId, returnName);
+        } else {
+          renderStudentList();
+        }
+      } else {
+        renderCourseGrid('과목을 선택하고 OX 퀴즈를 시작하세요');
+      }
+    }
+
+    function doLogout() {
+      localStorage.removeItem('mathstart_user');
+      selectedStudentId = null;
+      selectedStudentName = null;
+      allStudents = [];
+      document.getElementById('app-screen').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+      document.getElementById('login-error').classList.add('hidden');
+    }
+
+    // 자동 로그인 (localStorage)
+    const saved = localStorage.getItem('mathstart_user');
+    if (saved) {
+      try {
+        const u = JSON.parse(saved);
+        const label = u.role === 'admin' ? `${u.name} 선생님` : `${u.name} 학생`;
+        const role2 = u.role;
+        showApp(label, role2);
+      } catch(e) {
+        localStorage.removeItem('mathstart_user');
+      }
+    }
+
+    // Enter 키 지원
+    document.getElementById('studentPhone').addEventListener('keydown', e => { if (e.key === 'Enter') loginStudent(); });
+    document.getElementById('teacherPw').addEventListener('keydown', e => { if (e.key === 'Enter') loginTeacher(); });
+  </script>
+</body>
+</html>
