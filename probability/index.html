@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>구두테스트 퀴즈 - 확률과 통계</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#f97316">
+  <meta name="theme-color" content="#10b981">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="OX퀴즈">
@@ -49,7 +49,7 @@
     }
   </style>
 </head>
-<body class="bg-black">
+<body class="bg-[#0f0f1a]">
   <div id="app"></div>
 
   <script>
@@ -179,6 +179,7 @@
 
     // 카테고리 데이터
     // 카테고리 데이터
+    const SUBJECT_NAME = "확률과 통계";
     const categories = [
       {
         id: 1,
@@ -2762,7 +2763,7 @@
         app.innerHTML = `
           <div class="min-h-screen flex items-center justify-center">
             <div class="text-center">
-              <div class="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <div class="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
               <p class="text-white font-bold">데이터 불러오는 중...</p>
             </div>
           </div>
@@ -2860,17 +2861,17 @@
       app.innerHTML = `
         <div class="min-h-screen flex items-center justify-center p-6">
           <div class="max-w-md w-full">
-            <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border border-orange-500/30">
+            <div class="bg-[#141428] rounded-2xl p-8 shadow-2xl border border-emerald-500/30">
               <div class="flex justify-center mb-6">
-                <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/50">
+                <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/50">
                   ${icon('bookOpen', 'text-white', 32)}
                 </div>
               </div>
               <h1 class="text-3xl font-bold text-center mb-2 text-white">구두테스트 퀴즈</h1>
-              <h2 class="text-xl text-center mb-8 text-orange-500">확률과 통계</h2>
+              <h2 class="text-xl text-center mb-8 text-emerald-500">확률과 통계</h2>
               
               <div class="flex gap-2 mb-6">
-                <button id="studentBtn" class="flex-1 py-2 px-4 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg font-bold text-white text-sm">
+                <button id="studentBtn" class="flex-1 py-2 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg font-bold text-white text-sm">
                   학생
                 </button>
                 <button id="adminBtn" class="flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold text-white text-sm transition-all">
@@ -2889,7 +2890,7 @@
       const loginForm = document.getElementById('loginForm');
 
       function showStudentForm() {
-        studentBtn.className = "flex-1 py-2 px-4 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg font-bold text-white text-sm";
+        studentBtn.className = "flex-1 py-2 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg font-bold text-white text-sm";
         adminBtn.className = "flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold text-white text-sm transition-all";
         
         loginForm.innerHTML = `
@@ -2901,7 +2902,7 @@
                 id="nameInput"
                 value="${state.studentName}"
                 placeholder="이름을 입력하세요"
-                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition-all"
+                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-gray-500 transition-all"
               />
             </div>
 
@@ -2912,7 +2913,7 @@
                 id="phoneInput"
                 value="${state.phone}"
                 placeholder="전화번호 (- 없이)"
-                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition-all"
+                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-gray-500 transition-all"
               />
               <p class="text-xs text-gray-500 mt-1">예: 01012345678</p>
             </div>
@@ -2924,7 +2925,7 @@
                 id="teacherInput"
                 value="${state.teacherName}"
                 placeholder="선생님 성함"
-                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition-all"
+                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-gray-500 transition-all"
               />
               <p class="text-xs text-gray-500 mt-1">처음 가입시에만 입력</p>
             </div>
@@ -2933,7 +2934,7 @@
               <input
                 type="checkbox"
                 id="newStudentCheck"
-                class="w-4 h-4 bg-gray-800 border-gray-700 rounded focus:ring-orange-500 focus:ring-2 text-orange-500"
+                class="w-4 h-4 bg-gray-800 border-gray-700 rounded focus:ring-emerald-500 focus:ring-2 text-emerald-500"
               />
               <label for="newStudentCheck" class="text-sm text-gray-300 cursor-pointer">처음 가입하는 학생입니다</label>
             </div>
@@ -2944,7 +2945,7 @@
                   type="checkbox"
                   id="autoLoginCheck"
                   ${state.autoLogin ? 'checked' : ''}
-                  class="w-4 h-4 bg-gray-800 border-gray-700 rounded focus:ring-orange-500 focus:ring-2 text-orange-500"
+                  class="w-4 h-4 bg-gray-800 border-gray-700 rounded focus:ring-emerald-500 focus:ring-2 text-emerald-500"
                 />
                 <span class="ml-2 text-sm text-gray-300">자동 로그인</span>
               </label>
@@ -2953,7 +2954,7 @@
             
             <button
               id="loginBtn"
-              class="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl font-bold text-white transition-all shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 active:scale-95"
+              class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-bold text-white transition-all shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transform hover:scale-105 active:scale-95"
             >
               시작하기
             </button>
@@ -3000,7 +3001,7 @@
 
       function showAdminForm() {
         studentBtn.className = "flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold text-white text-sm transition-all";
-        adminBtn.className = "flex-1 py-2 px-4 bg-gradient-to-r from-orange-500 to-orange-600 rounded-lg font-bold text-white text-sm";
+        adminBtn.className = "flex-1 py-2 px-4 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-lg font-bold text-white text-sm";
         
         loginForm.innerHTML = `
           <div class="space-y-4">
@@ -3011,7 +3012,7 @@
                 id="adminNameInput"
                 value="${state.adminName}"
                 placeholder="이름을 입력하세요"
-                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition-all"
+                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-gray-500 transition-all"
               />
             </div>
 
@@ -3021,7 +3022,7 @@
                 type="password"
                 id="adminPasswordInput"
                 placeholder="비밀번호를 입력하세요"
-                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition-all"
+                class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-gray-500 transition-all"
               />
             </div>
 
@@ -3029,7 +3030,7 @@
               <input
                 type="checkbox"
                 id="adminAutoLoginCheckbox"
-                class="w-4 h-4 bg-gray-800 border-gray-700 rounded focus:ring-orange-500 focus:ring-2"
+                class="w-4 h-4 bg-gray-800 border-gray-700 rounded focus:ring-emerald-500 focus:ring-2"
               />
               <label for="adminAutoLoginCheckbox" class="ml-2 text-sm text-gray-300">
                 자동 로그인
@@ -3038,7 +3039,7 @@
             
             <button
               id="adminLoginBtn"
-              class="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl font-bold text-white transition-all shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 active:scale-95"
+              class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-bold text-white transition-all shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transform hover:scale-105 active:scale-95"
             >
               로그인
             </button>
@@ -3085,15 +3086,15 @@
       app.innerHTML = `
         <div class="min-h-screen flex items-center justify-center p-6">
           <div class="max-w-md w-full">
-            <div class="bg-gray-900 rounded-2xl p-8 shadow-2xl border border-orange-500/30">
+            <div class="bg-[#141428] rounded-2xl p-8 shadow-2xl border border-emerald-500/30">
               <div class="mb-6">
-                <button id="backBtn" class="text-sm text-orange-500 hover:text-orange-400 flex items-center font-semibold">
+                <button id="backBtn" class="text-sm text-emerald-500 hover:text-emerald-400 flex items-center font-semibold">
                   ${icon('chevronLeft', '', 16)}돌아가기
                 </button>
               </div>
 
               <div class="flex justify-center mb-6">
-                <div class="w-16 h-16 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/50">
+                <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/50">
                   ${icon('settings', 'text-white', 32)}
                 </div>
               </div>
@@ -3108,7 +3109,7 @@
                     type="text"
                     id="regAdminNameInput"
                     placeholder="이름을 입력하세요"
-                    class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition-all"
+                    class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-gray-500 transition-all"
                   />
                 </div>
 
@@ -3118,14 +3119,14 @@
                     type="password"
                     id="secretKeyInput"
                     placeholder="보안 키를 입력하세요"
-                    class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 text-white placeholder-gray-500 transition-all"
+                    class="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 text-white placeholder-gray-500 transition-all"
                   />
                   <p class="text-xs text-red-400 mt-1">⚠️ 관리자만 알고 있는 보안 키</p>
                 </div>
                 
                 <button
                   id="registerBtn"
-                  class="w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl font-bold text-white transition-all shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 active:scale-95"
+                  class="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-bold text-white transition-all shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transform hover:scale-105 active:scale-95"
                 >
                   등록하기
                 </button>
@@ -3197,10 +3198,10 @@
       app.innerHTML = `
         <div class="min-h-screen p-6">
           <div class="max-w-5xl mx-auto">
-            <div class="bg-gray-900 rounded-2xl p-6 mb-8 shadow-xl border border-orange-500/30">
+            <div class="bg-[#141428] rounded-2xl p-6 mb-8 shadow-xl border border-emerald-500/30">
               <div class="flex items-center justify-between">
                 <div class="flex items-center">
-                  <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mr-3">
+                  <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mr-3">
                     ${icon('users', 'text-white')}
                   </div>
                   <div>
@@ -3217,7 +3218,7 @@
             <!-- 재원생/퇴원생 탭 -->
             <div class="mb-6">
               <div class="flex gap-2 mb-4">
-                <button id="activeTab" class="px-6 py-3 rounded-lg font-bold transition-all ${state.studentStatusFilter !== 'withdrawn' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}">
+                <button id="activeTab" class="px-6 py-3 rounded-lg font-bold transition-all ${state.studentStatusFilter !== 'withdrawn' ? 'bg-emerald-500 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}">
                   재원생 (${activeStudents.length}명)
                 </button>
                 <button id="withdrawnTab" class="px-6 py-3 rounded-lg font-bold transition-all ${state.studentStatusFilter === 'withdrawn' ? 'bg-gray-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}">
@@ -3225,18 +3226,18 @@
                 </button>
               </div>
               
-              <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+              <div class="bg-[#141428] rounded-xl p-4 border border-[#1f2f3f]">
                 <div class="flex items-center justify-between">
                   <span class="text-gray-400 text-sm font-semibold">
                     ${state.studentStatusFilter === 'withdrawn' ? '퇴원생' : '재원생'} 수
                   </span>
-                  <span class="text-2xl font-bold text-orange-400">${displayStudents.length}명</span>
+                  <span class="text-2xl font-bold text-emerald-400">${displayStudents.length}명</span>
                 </div>
               </div>
             </div>
 
             ${displayStudents.length === 0 ? `
-              <div class="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800">
+              <div class="bg-[#141428] rounded-2xl p-12 text-center border border-[#1f2f3f]">
                 ${icon('users', 'mx-auto mb-4 text-gray-600', 48)}
                 <p class="text-gray-400 font-medium">
                   ${state.studentStatusFilter === 'withdrawn' ? '퇴원 처리된 학생이 없습니다.' : '아직 담당 학생이 없습니다.'}
@@ -3258,10 +3259,10 @@
                   return `
                     <button
                       data-student="${student.id}"
-                      class="student-btn bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-xl hover:shadow-orange-500/20 hover:border-orange-500/50 transition-all text-left transform hover:scale-105 active:scale-95"
+                      class="student-btn bg-[#141428] rounded-2xl p-6 border border-[#1f2f3f] shadow-xl hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all text-left transform hover:scale-105 active:scale-95"
                     >
                       <div class="flex items-center mb-4">
-                        <div class="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mr-3">
+                        <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mr-3">
                           ${icon('user', 'text-white', 20)}
                         </div>
                         <div>
@@ -3272,7 +3273,7 @@
                       
                       <div class="grid grid-cols-3 gap-2 mb-3">
                         <div class="bg-gray-800/50 rounded-lg p-2 text-center">
-                          <div class="text-lg font-bold text-orange-400">${totalAttempts}</div>
+                          <div class="text-lg font-bold text-emerald-400">${totalAttempts}</div>
                           <div class="text-xs text-gray-500">시도</div>
                         </div>
                         <div class="bg-gray-800/50 rounded-lg p-2 text-center">
@@ -3331,15 +3332,15 @@
         <div class="min-h-screen p-6">
           <div class="max-w-5xl mx-auto">
             <div class="mb-4">
-              <button id="backBtn" class="text-sm text-orange-500 hover:text-orange-400 flex items-center font-semibold">
+              <button id="backBtn" class="text-sm text-emerald-500 hover:text-emerald-400 flex items-center font-semibold">
                 ${icon('chevronLeft', '', 16)}학생 목록으로 돌아가기
               </button>
             </div>
 
-            <div class="bg-gray-900 rounded-2xl p-6 mb-6 shadow-xl border border-orange-500/30">
+            <div class="bg-[#141428] rounded-2xl p-6 mb-6 shadow-xl border border-emerald-500/30">
               <div class="flex items-center justify-between mb-4">
                 <div class="flex items-center">
-                  <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mr-3">
+                  <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mr-3">
                     ${icon('user', 'text-white')}
                   </div>
                   <div>
@@ -3376,19 +3377,19 @@
             </div>
 
             <div class="grid md:grid-cols-4 gap-4 mb-6">
-              <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+              <div class="bg-[#141428] rounded-xl p-4 border border-[#1f2f3f]">
                 <div class="text-center">
-                  <div class="text-2xl font-bold text-orange-400">${attempts.length}</div>
+                  <div class="text-2xl font-bold text-emerald-400">${attempts.length}</div>
                   <div class="text-xs text-gray-500 mt-1">전체 시도</div>
                 </div>
               </div>
-              <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+              <div class="bg-[#141428] rounded-xl p-4 border border-[#1f2f3f]">
                 <div class="text-center">
                   <div class="text-2xl font-bold text-green-400">${attempts.filter(a => a.percentage === 100).length}</div>
                   <div class="text-xs text-gray-500 mt-1">완료 테마</div>
                 </div>
               </div>
-              <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+              <div class="bg-[#141428] rounded-xl p-4 border border-[#1f2f3f]">
                 <div class="text-center">
                   <div class="text-2xl font-bold text-blue-400">
                     ${attempts.length > 0 ? Math.round(attempts.reduce((sum, a) => sum + a.percentage, 0) / attempts.length) : 0}%
@@ -3396,7 +3397,7 @@
                   <div class="text-xs text-gray-500 mt-1">평균 정답률</div>
                 </div>
               </div>
-              <div class="bg-gray-900 rounded-xl p-4 border border-gray-800">
+              <div class="bg-[#141428] rounded-xl p-4 border border-[#1f2f3f]">
                 <div class="text-center">
                   <div class="text-2xl font-bold text-purple-400">
                     ${attempts.length > 0 ? Math.round(attempts.reduce((sum, a) => sum + a.correct, 0) / attempts.length) : 0}
@@ -3407,7 +3408,7 @@
             </div>
 
             ${attempts.length === 0 ? `
-              <div class="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800">
+              <div class="bg-[#141428] rounded-2xl p-12 text-center border border-[#1f2f3f]">
                 ${icon('barChart', 'mx-auto mb-4 text-gray-600', 48)}
                 <p class="text-gray-400 font-medium">아직 학습 기록이 없습니다.</p>
               </div>
@@ -3488,7 +3489,7 @@
                     }).filter(t => t.availableRounds.length > 0);
 
                     return `
-                      <div class="bg-gray-900 rounded-2xl border border-gray-800 shadow-xl overflow-hidden">
+                      <div class="bg-[#141428] rounded-2xl border border-[#1f2f3f] shadow-xl overflow-hidden">
                         <button
                           class="attempt-card-header w-full text-left p-5 hover:bg-gray-800/50 transition-all"
                           data-attempt-id="${dateCardId}"
@@ -3498,12 +3499,12 @@
                               <h3 class="text-lg font-bold text-white mb-1">${group.date}</h3>
                               <p class="text-xs text-gray-500">총 ${totalAnswered}개 문제 · ${totalTimeStr}</p>
                             </div>
-                            <div class="text-3xl font-bold ${overallPercentage === 100 ? 'text-green-400' : overallPercentage >= 80 ? 'text-orange-400' : 'text-red-400'}">
+                            <div class="text-3xl font-bold ${overallPercentage === 100 ? 'text-green-400' : overallPercentage >= 80 ? 'text-emerald-400' : 'text-red-400'}">
                               ${overallPercentage}%
                             </div>
                           </div>
 
-                          <div class="grid grid-cols-3 gap-3 pt-4 border-t border-gray-800">
+                          <div class="grid grid-cols-3 gap-3 pt-4 border-t border-[#1f2f3f]">
                             <div class="text-center">
                               <div class="text-xl font-bold text-green-400">${totalCorrect}</div>
                               <div class="text-xs text-gray-500">맞힌 개수</div>
@@ -3521,7 +3522,7 @@
                         </button>
 
                         ${isExpanded ? `
-                          <div class="border-t border-gray-800 p-5 bg-gray-800/30">
+                          <div class="border-t border-[#1f2f3f] p-5 bg-gray-800/30">
                             <!-- 구두테스트 재시험 시작 버튼들 -->
                             ${testsNeedingRetest.length > 0 ? `
                               <div class="mb-6 space-y-2">
@@ -3569,7 +3570,7 @@
                                 });
 
                                 return `
-                                  <div class="bg-gray-900/50 rounded-xl border border-gray-700 overflow-hidden">
+                                  <div class="bg-[#141428]/50 rounded-xl border border-gray-700 overflow-hidden">
                                     <button
                                       class="attempt-card-header w-full text-left p-3 hover:bg-gray-800/30 transition-all"
                                       data-attempt-id="${testCardId}"
@@ -3578,7 +3579,7 @@
                                         <div class="flex-1">
                                           <div class="flex items-center gap-2 mb-1">
                                             <h4 class="text-sm font-bold text-white">${test.themeName}</h4>
-                                            <span class="text-xs px-2 py-0.5 rounded ${test.isWrongAnswerTest ? 'bg-purple-500/20 text-purple-400' : 'bg-orange-500/20 text-orange-400'}">
+                                            <span class="text-xs px-2 py-0.5 rounded ${test.isWrongAnswerTest ? 'bg-purple-500/20 text-purple-400' : 'bg-emerald-500/20 text-emerald-400'}">
                                               ${test.isWrongAnswerTest ? `재시험 ${test.retestRound || 1}회차` : '구두테스트'}
                                             </span>
                                           </div>
@@ -3586,7 +3587,7 @@
                                         </div>
                                         <div class="flex items-center gap-3">
                                           <div class="text-right">
-                                            <div class="text-lg font-bold ${test.percentage === 100 ? 'text-green-400' : test.percentage >= 80 ? 'text-orange-400' : 'text-red-400'}">
+                                            <div class="text-lg font-bold ${test.percentage === 100 ? 'text-green-400' : test.percentage >= 80 ? 'text-emerald-400' : 'text-red-400'}">
                                               ${test.percentage}%
                                             </div>
                                             <div class="text-xs text-gray-500">${test.correct}/${test.answeredCount || test.total}</div>
@@ -3614,8 +3615,8 @@
                                                   </div>
                                                 ` : ''}
                                                 ${test.teacherNotes?.[idx] ? `
-                                                  <div class="mt-2 bg-orange-900/20 border border-orange-500/30 rounded p-2">
-                                                    <p class="text-xs text-orange-400 font-semibold mb-1">📝 선생님 메모:</p>
+                                                  <div class="mt-2 bg-emerald-900/20 border border-emerald-500/30 rounded p-2">
+                                                    <p class="text-xs text-emerald-400 font-semibold mb-1">📝 선생님 메모:</p>
                                                     <p class="text-xs text-gray-300">${test.teacherNotes[idx]}</p>
                                                   </div>
                                                 ` : ''}
@@ -3741,10 +3742,10 @@
       app.innerHTML = `
         <div class="min-h-screen p-6">
           <div class="max-w-5xl mx-auto">
-            <div class="bg-gray-900 rounded-2xl p-6 mb-6 shadow-xl border border-orange-500/30">
+            <div class="bg-[#141428] rounded-2xl p-6 mb-6 shadow-xl border border-emerald-500/30">
               <div class="flex items-center justify-between">
                 <div class="flex items-center">
-                  <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mr-3">
+                  <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mr-3">
                     ${icon('user', 'text-white')}
                   </div>
                   <div>
@@ -3764,7 +3765,7 @@
             </div>
 
             ${!hasData ? `
-              <div class="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800 mb-6">
+              <div class="bg-[#141428] rounded-2xl p-12 text-center border border-[#1f2f3f] mb-6">
                 ${icon('barChart', 'mx-auto mb-4 text-gray-600', 48)}
                 <p class="text-gray-400 font-medium mb-2">아직 학습 기록이 없습니다.</p>
                 <p class="text-sm text-gray-500">선생님이 구두테스트를 시작하면 기록이 표시됩니다.</p>
@@ -3818,10 +3819,10 @@
                       if (!theme) return '';
 
                       const testType = test.isWrongAnswerTest ? `재시험 ${test.retestRound || 1}회차` : '구두테스트';
-                      const testColor = test.isWrongAnswerTest ? 'purple' : 'orange';
+                      const testColor = test.isWrongAnswerTest ? 'purple' : 'emerald';
 
                       return `
-                        <div class="bg-gray-900 rounded-2xl border border-gray-800 shadow-xl overflow-hidden">
+                        <div class="bg-[#141428] rounded-2xl border border-[#1f2f3f] shadow-xl overflow-hidden">
                           <button
                             class="attempt-card-header w-full text-left p-4 hover:bg-gray-800/50 transition-all"
                             data-attempt-id="${testId}"
@@ -3836,12 +3837,12 @@
                                 </div>
                                 <p class="text-xs text-gray-500">${test.date}</p>
                               </div>
-                              <div class="text-2xl font-bold ${test.percentage === 100 ? 'text-green-400' : test.percentage >= 80 ? 'text-orange-400' : 'text-red-400'}">
+                              <div class="text-2xl font-bold ${test.percentage === 100 ? 'text-green-400' : test.percentage >= 80 ? 'text-emerald-400' : 'text-red-400'}">
                                 ${test.percentage}%
                               </div>
                             </div>
 
-                            <div class="grid grid-cols-4 gap-2 pt-3 border-t border-gray-800">
+                            <div class="grid grid-cols-4 gap-2 pt-3 border-t border-[#1f2f3f]">
                               <div class="text-center">
                                 <div class="text-base font-bold text-green-400">${test.correct}</div>
                                 <div class="text-xs text-gray-500">맞힘</div>
@@ -4000,7 +4001,7 @@
                     return `
                       <div class="grid md:grid-cols-2 gap-4">
                         <!-- 구두테스트 카드 -->
-                        <div class="bg-gray-900 rounded-2xl border border-gray-800 shadow-xl overflow-hidden">
+                        <div class="bg-[#141428] rounded-2xl border border-[#1f2f3f] shadow-xl overflow-hidden">
                           <button
                             class="attempt-card-header w-full text-left p-4 hover:bg-gray-800/50 transition-all"
                             data-attempt-id="${regularAttemptId}"
@@ -4015,12 +4016,12 @@
                                 </div>
                                 <p class="text-xs text-gray-500">${regularTest.date.split(' ').slice(3).join(' ')}</p>
                               </div>
-                              <div class="text-2xl font-bold ${regularTest.percentage === 100 ? 'text-green-400' : regularTest.percentage >= 80 ? 'text-orange-400' : 'text-red-400'}">
+                              <div class="text-2xl font-bold ${regularTest.percentage === 100 ? 'text-green-400' : regularTest.percentage >= 80 ? 'text-emerald-400' : 'text-red-400'}">
                                 ${regularTest.percentage}%
                               </div>
                             </div>
 
-                            <div class="grid grid-cols-4 gap-2 pt-3 border-t border-gray-800">
+                            <div class="grid grid-cols-4 gap-2 pt-3 border-t border-[#1f2f3f]">
                               <div class="text-center">
                                 <div class="text-base font-bold text-green-400">${regularTest.correct}</div>
                                 <div class="text-xs text-gray-500">맞힘</div>
@@ -4047,7 +4048,7 @@
                           </button>
 
                           ${isRegularExpanded && theme ? `
-                            <div class="border-t border-gray-800 p-4 bg-gray-800/30">
+                            <div class="border-t border-[#1f2f3f] p-4 bg-gray-800/30">
                               <div class="space-y-3">
                                 ${[...regularCorrectQuestions, ...regularWrongQuestions].map(({ idx, question, answer }) => {
                                   const isCorrect = answer?.correct;
@@ -4062,8 +4063,8 @@
                                         </div>
                                       ` : ''}
                                       ${regularTest.teacherNotes?.[idx] ? `
-                                        <div class="mt-2 bg-orange-900/20 border border-orange-500/30 rounded p-2">
-                                          <p class="text-xs text-orange-400 font-semibold mb-1">📝 선생님 메모:</p>
+                                        <div class="mt-2 bg-emerald-900/20 border border-emerald-500/30 rounded p-2">
+                                          <p class="text-xs text-emerald-400 font-semibold mb-1">📝 선생님 메모:</p>
                                           <p class="text-xs text-gray-300">${regularTest.teacherNotes[idx]}</p>
                                         </div>
                                       ` : ''}
@@ -4077,7 +4078,7 @@
 
                         <!-- 재시험 카드 (1회차와 2회차를 묶어서 표시) -->
                         ${hasRetests ? `
-                          <div class="bg-gray-900 rounded-2xl border border-gray-800 shadow-xl overflow-hidden">
+                          <div class="bg-[#141428] rounded-2xl border border-[#1f2f3f] shadow-xl overflow-hidden">
                             <button
                               class="attempt-card-header w-full text-left p-4 hover:bg-gray-800/50 transition-all"
                               data-attempt-id="${retestsAttemptId}"
@@ -4105,7 +4106,7 @@
                             </button>
 
                             ${isRetestsExpanded && theme ? `
-                              <div class="border-t border-gray-800 p-4 bg-gray-800/30 space-y-4">
+                              <div class="border-t border-[#1f2f3f] p-4 bg-gray-800/30 space-y-4">
                                 <!-- 재시험 1회차 -->
                                 ${wrongTest1 ? `
                                   <div class="bg-purple-900/10 rounded-xl border border-purple-500/30 p-3">
@@ -4160,8 +4161,8 @@
                                               </div>
                                             ` : ''}
                                             ${wrongTest1.teacherNotes?.[idx] ? `
-                                              <div class="mt-2 bg-orange-900/20 border border-orange-500/30 rounded p-2">
-                                                <p class="text-xs text-orange-400 font-semibold mb-1">📝 선생님 메모:</p>
+                                              <div class="mt-2 bg-emerald-900/20 border border-emerald-500/30 rounded p-2">
+                                                <p class="text-xs text-emerald-400 font-semibold mb-1">📝 선생님 메모:</p>
                                                 <p class="text-xs text-gray-300">${wrongTest1.teacherNotes[idx]}</p>
                                               </div>
                                             ` : ''}
@@ -4230,8 +4231,8 @@
                                               </div>
                                             ` : ''}
                                             ${wrongTest2.teacherNotes?.[idx] ? `
-                                              <div class="mt-2 bg-orange-900/20 border border-orange-500/30 rounded p-2">
-                                                <p class="text-xs text-orange-400 font-semibold mb-1">📝 선생님 메모:</p>
+                                              <div class="mt-2 bg-emerald-900/20 border border-emerald-500/30 rounded p-2">
+                                                <p class="text-xs text-emerald-400 font-semibold mb-1">📝 선생님 메모:</p>
                                                 <p class="text-xs text-gray-300">${wrongTest2.teacherNotes[idx]}</p>
                                               </div>
                                             ` : ''}
@@ -4245,7 +4246,7 @@
                             ` : ''}
                           </div>
                         ` : `
-                          <div class="bg-gray-900/30 rounded-2xl border border-dashed border-gray-700 p-8 flex items-center justify-center">
+                          <div class="bg-[#141428]/30 rounded-2xl border border-dashed border-gray-700 p-8 flex items-center justify-center">
                             <p class="text-gray-600 text-sm text-center">
                               재시험 미진행
                             </p>
@@ -4377,46 +4378,28 @@
       const student = state.selectedStudent;
 
       app.innerHTML = `
-        <div class="min-h-screen p-6">
-          <div class="max-w-5xl mx-auto">
-            <div class="bg-gray-900 rounded-2xl p-6 mb-8 shadow-xl border border-orange-500/30">
-              <div class="flex items-center mb-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mr-3">
-                  ${icon('user', 'text-white')}
-                </div>
-                <div class="flex-1">
-                  <h2 class="text-xl font-bold text-white">${student.studentName}</h2>
-                  <p class="text-sm text-gray-400 mt-1">${state.adminName} 선생님</p>
-                </div>
-              </div>
-              <div class="flex gap-2">
-                <button id="recordBtn" class="flex items-center px-5 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-bold text-white transition-all transform hover:scale-105 active:scale-95">
-                  ${icon('barChart', 'mr-2', 18)}학습 기록 보기
-                </button>
-                <button id="backBtn" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg font-bold text-white transition-all transform hover:scale-105 active:scale-95 text-sm">
-                  뒤로 가기
-                </button>
-              </div>
+        <div class="min-h-screen">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid #1f1f35;background:#0f0f1a;position:sticky;top:0;z-index:10">
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <span style="font-size:1.1rem;font-weight:800;color:#fff">${SUBJECT_NAME}</span>
+              <span style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#fb923c;font-weight:700">${state.adminName} 선생님</span>
             </div>
-
-            <div class="grid md:grid-cols-2 gap-4">
-              ${categories.map(category => `
-                <button
-                  data-cat="${category.id}"
-                  class="cat-btn bg-gray-900 rounded-2xl p-6 border shadow-xl text-left transition-all transform ${
-                    category.chapters.length > 0
-                      ? 'border-gray-800 hover:shadow-orange-500/20 hover:border-orange-500/50 hover:scale-105 active:scale-95'
-                      : 'border-gray-800 opacity-50 cursor-not-allowed'
-                  }"
-                  ${category.chapters.length === 0 ? 'disabled' : ''}
-                >
-                  <h3 class="text-base font-bold text-white mb-2">${category.name}</h3>
-                  <p class="text-xs text-gray-500 font-semibold">
-                    ${category.chapters.length > 0 ? `${category.chapters.length}개의 테마` : '준비 중'}
-                  </p>
+          </div>
+          <button id="backBtn" style="margin:1rem 1.5rem 0;display:inline-flex;align-items:center;gap:0.4rem;background:none;border:none;color:#10b981;font-size:0.85rem;font-family:inherit;font-weight:700;cursor:pointer">← 과목 선택으로</button>
+          <p style="color:#6b7280;font-size:0.88rem;margin:0.75rem 1.5rem 0">${student.studentName} 학생의 구두테스트</p>
+          <button id="recordBtn" style="margin:1rem 1.5rem 1.5rem;padding:0.6rem 1.25rem;background:#1f2937;border:1px solid #374151;border-radius:0.75rem;color:#9ca3af;font-size:0.85rem;font-family:inherit;cursor:pointer;font-weight:700">📊 학습 기록 보기</button>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;padding:0 1.5rem 3rem">
+            ${categories.map(category => {
+              const hasCh = category.chapters.length > 0;
+              const hover = hasCh ? `onmouseover="this.style.borderColor='#10b981';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#1f2f3f';this.style.transform='translateY(0)'"` : '';
+              const meta = hasCh ? (category.chapters.length + '개의 테마') : '준비 중';
+              return `
+                <button data-cat="${category.id}" class="cat-btn" ${hasCh ? '' : 'disabled'} style="background:#141428;border:1px solid ${hasCh ? '#1f2f3f' : '#1a1a2e'};border-radius:1rem;padding:1.5rem;cursor:${hasCh ? 'pointer' : 'default'};opacity:${hasCh ? '1' : '0.45'};text-align:left;font-family:inherit;transition:all 0.18s" ${hover}>
+                  <h3 style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:0.4rem">${category.name}</h3>
+                  <p style="color:#6b7280;font-size:0.78rem;font-weight:600">${meta}</p>
                 </button>
-              `).join('')}
-            </div>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -4450,43 +4433,28 @@
 
     function renderCategorySelection(app) {
       app.innerHTML = `
-        <div class="min-h-screen p-6">
-          <div class="max-w-5xl mx-auto">
-            <div class="bg-gray-900 rounded-2xl p-6 mb-8 shadow-xl border border-orange-500/30">
-              <div class="flex items-center mb-4">
-                <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mr-3">
-                  ${icon('user', 'text-white')}
-                </div>
-                <h2 class="text-xl font-bold text-white">${state.studentName}</h2>
-              </div>
-              <div class="flex gap-2">
-                <button id="recordBtn" class="flex items-center px-5 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg font-bold text-white transition-all border border-gray-700 transform hover:scale-105 active:scale-95">
-                  ${icon('barChart', 'mr-2', 18)}학습 기록
-                </button>
-                <button id="logoutBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-bold text-white transition-all transform hover:scale-105 active:scale-95 text-sm">
-                  로그아웃
-                </button>
-              </div>
+        <div class="min-h-screen">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid #1f1f35;background:#0f0f1a;position:sticky;top:0;z-index:10">
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <span style="font-size:1.1rem;font-weight:800;color:#fff">${SUBJECT_NAME}</span>
+              <span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#818cf8;font-weight:700">${state.studentName} 학생</span>
             </div>
-
-            <div class="grid md:grid-cols-2 gap-4">
-              ${categories.map(category => `
-                <button
-                  data-cat="${category.id}"
-                  class="cat-btn bg-gray-900 rounded-2xl p-6 border shadow-xl text-left transition-all transform ${
-                    category.chapters.length > 0
-                      ? 'border-gray-800 hover:shadow-orange-500/20 hover:border-orange-500/50 hover:scale-105 active:scale-95'
-                      : 'border-gray-800 opacity-50 cursor-not-allowed'
-                  }"
-                  ${category.chapters.length === 0 ? 'disabled' : ''}
-                >
-                  <h3 class="text-base font-bold text-white mb-2">${category.name}</h3>
-                  <p class="text-xs text-gray-500 font-semibold">
-                    ${category.chapters.length > 0 ? `${category.chapters.length}개의 테마` : '준비 중'}
-                  </p>
+            <button id="logoutBtn" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer">로그아웃</button>
+          </div>
+          <p style="color:#6b7280;font-size:0.88rem;margin:1rem 1.5rem 0">수강하려는 챕터를 선택하세요</p>
+          <button id="recordBtn" style="margin:0.75rem 1.5rem 1.5rem;padding:0.6rem 1.25rem;background:#1f2937;border:1px solid #374151;border-radius:0.75rem;color:#9ca3af;font-size:0.85rem;font-family:inherit;cursor:pointer;font-weight:700">📊 학습 기록</button>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;padding:0 1.5rem 3rem">
+            ${categories.map(category => {
+              const hasCh = category.chapters.length > 0;
+              const hover = hasCh ? `onmouseover="this.style.borderColor='#10b981';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#1f2f3f';this.style.transform='translateY(0)'"` : '';
+              const meta = hasCh ? (category.chapters.length + '개의 테마') : '준비 중';
+              return `
+                <button data-cat="${category.id}" class="cat-btn" ${hasCh ? '' : 'disabled'} style="background:#141428;border:1px solid ${hasCh ? '#1f2f3f' : '#1a1a2e'};border-radius:1rem;padding:1.5rem;cursor:${hasCh ? 'pointer' : 'default'};opacity:${hasCh ? '1' : '0.45'};text-align:left;font-family:inherit;transition:all 0.18s" ${hover}>
+                  <h3 style="font-size:1rem;font-weight:800;color:#fff;margin-bottom:0.4rem">${category.name}</h3>
+                  <p style="color:#6b7280;font-size:0.78rem;font-weight:600">${meta}</p>
                 </button>
-              `).join('')}
-            </div>
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -4519,40 +4487,30 @@
       const category = categories.find(c => c.id === state.selectedCategory);
       
       app.innerHTML = `
-        <div class="min-h-screen p-6">
-          <div class="max-w-5xl mx-auto">
-            <div class="mb-4">
-              <button id="backBtn" class="text-sm text-orange-500 hover:text-orange-400 flex items-center font-semibold">
-                ${icon('chevronLeft', '', 16)}챕터 선택으로 돌아가기
-              </button>
+        <div class="min-h-screen">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid #1f1f35;background:#0f0f1a;position:sticky;top:0;z-index:10">
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <span style="font-size:1.1rem;font-weight:800;color:#fff">${SUBJECT_NAME}</span>
+              <span style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#34d399;font-weight:700">${category.name}</span>
             </div>
-
-            <div class="bg-gray-900 rounded-2xl p-6 mb-8 shadow-xl border border-orange-500/30">
-              <div class="flex items-center justify-between mb-4">
-                <div>
-                  <h2 class="text-xl font-bold text-white">${category.name}</h2>
-                  <p class="text-sm text-gray-400 mt-1 font-medium">테마 선택</p>
-                </div>
-              </div>
-              
-              ${category.chapterInfo ? `
-                <div class="mt-4 pt-4 border-t border-gray-700">
-                  <div class="grid grid-cols-2 gap-3">
-                    ${category.chapterInfo.map(info => `
-                      <div class="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-                        <div class="flex items-baseline gap-2 mb-1">
-                          <span class="text-orange-400 font-bold text-xs">${info.partName}</span>
-                          <span class="text-gray-300 text-xs font-medium">${info.description}</span>
-                        </div>
-                        <span class="text-gray-500 text-xs">${info.range}</span>
-                      </div>
-                    `).join('')}
+          </div>
+          <div style="padding:0 1.5rem 3rem">
+            <button id="backBtn" style="margin:1rem 0 0;display:inline-flex;align-items:center;gap:0.4rem;background:none;border:none;color:#10b981;font-size:0.85rem;font-family:inherit;font-weight:700;cursor:pointer">← 챕터 선택으로</button>
+            <p style="color:#6b7280;font-size:0.88rem;margin:0.75rem 0 0">테마를 선택하세요</p>
+            ${category.chapterInfo ? `
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:0.75rem;margin-top:1rem">
+                ${category.chapterInfo.map(info => `
+                  <div style="background:#1f2937;border:1px solid #374151;border-radius:0.6rem;padding:0.6rem 0.75rem">
+                    <div style="display:flex;align-items:baseline;gap:0.5rem;margin-bottom:0.15rem">
+                      <span style="color:#34d399;font-weight:700;font-size:0.72rem">${info.partName}</span>
+                      <span style="color:#d1d5db;font-size:0.72rem;font-weight:500">${info.description}</span>
+                    </div>
+                    <span style="color:#6b7280;font-size:0.72rem">${info.range}</span>
                   </div>
-                </div>
-              ` : ''}
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-4">
+                `).join('')}
+              </div>
+            ` : ''}
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-top:1.25rem">
               ${category.chapters.map(theme => {
                 const status = getThemeStatus(state.selectedCategory, theme.id);
                 const locked = isLocked(state.selectedCategory, theme.id);
@@ -4562,10 +4520,10 @@
                 const isCompleted = status.status === 'completed';
 
                 return `
-                  <div class="bg-gray-900 rounded-2xl p-6 shadow-xl transition-all relative ${
+                  <div class="bg-[#141428] rounded-2xl p-6 shadow-xl transition-all relative ${
                     isCompleted 
                       ? 'border-2 border-green-500/50 shadow-green-500/20' 
-                      : 'border border-gray-800 hover:shadow-orange-500/20 hover:border-orange-500/50'
+                      : 'border border-[#1f2f3f] hover:shadow-emerald-500/20 hover:border-emerald-500/50'
                   }">
                     ${isCompleted ? `
                       <div class="absolute top-4 right-4 flex items-center justify-center" style="width: 28px; height: 28px;">
@@ -4585,7 +4543,7 @@
                     ${status.lastAttempt ? `
                       <div class="mb-4 p-4 bg-gray-800/50 rounded-xl border border-gray-700">
                         <p class="text-xs text-gray-500 font-semibold mb-1">최근 시도</p>
-                        <p class="text-lg font-bold text-orange-400">
+                        <p class="text-lg font-bold text-emerald-400">
                           ${status.lastAttempt.percentage}% <span class="text-sm text-gray-500">(${status.lastAttempt.correct}/${status.lastAttempt.total})</span>
                         </p>
                         <p class="text-xs text-gray-500 mt-1">시도 횟수: ${status.attemptCount}회</p>
@@ -4611,11 +4569,11 @@
                         </button>
                       </div>
                     ` : status.status === 'retry' ? `
-                      <button data-theme="${theme.id}" class="start-btn w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl font-bold text-white transition-all text-sm shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 active:scale-95">
+                      <button data-theme="${theme.id}" class="start-btn w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-bold text-white transition-all text-sm shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transform hover:scale-105 active:scale-95">
                         퀴즈 다시 도전하기
                       </button>
                     ` : `
-                      <button data-theme="${theme.id}" class="start-btn w-full py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl font-bold text-white transition-all text-sm shadow-lg shadow-orange-500/30 hover:shadow-orange-500/50 transform hover:scale-105 active:scale-95">
+                      <button data-theme="${theme.id}" class="start-btn w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-bold text-white transition-all text-sm shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 transform hover:scale-105 active:scale-95">
                         퀴즈 시작
                       </button>
                     `}
@@ -4674,28 +4632,20 @@
       const isComplete = answeredCount >= 1;
 
       app.innerHTML = `
-        <div class="min-h-screen p-6">
-          <div class="max-w-4xl mx-auto">
+        <div class="min-h-screen">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid #1f1f35;background:#0f0f1a;position:sticky;top:0;z-index:10">
+            <div style="display:flex;align-items:center;gap:0.75rem">
+              <span style="font-size:1.1rem;font-weight:800;color:#fff">${SUBJECT_NAME}</span>
+              <span style="background:${isWrongTest ? 'rgba(168,85,247,0.15)' : 'rgba(16,185,129,0.15)'};border:1px solid ${isWrongTest ? 'rgba(168,85,247,0.4)' : 'rgba(16,185,129,0.4)'};border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:${isWrongTest ? '#c084fc' : '#34d399'};font-weight:700">${themeName}</span>
+            </div>
+            <span style="background:#1f2937;border:1px solid #374151;border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#9ca3af;font-weight:700">${state.currentQuestion + 1} / ${questions.length}</span>
+          </div>
+          <div class="max-w-4xl mx-auto p-6">
             <div class="mb-4">
-              <button id="backToThemeBtn" class="text-sm text-orange-500 hover:text-orange-400 flex items-center font-semibold">
-                ${icon('chevronLeft', '', 16)}${isWrongTest ? '학습 기록으로 돌아가기' : '테마 선택으로 돌아가기'}
-              </button>
+              <button id="backToThemeBtn" style="background:none;border:none;color:#10b981;font-size:0.85rem;font-family:inherit;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:0.4rem">← ${isWrongTest ? '학습 기록으로' : '테마 선택으로'}</button>
             </div>
 
-            <div class="bg-gray-900 rounded-2xl p-5 mb-6 shadow-xl border ${isWrongTest ? 'border-purple-500/30' : 'border-orange-500/30'}">
-              <div class="flex items-center justify-between">
-                <div>
-                  <h2 class="text-base font-bold text-white">${state.studentName}</h2>
-                  <p class="text-xs ${isWrongTest ? 'text-purple-400' : 'text-gray-400'} mt-1 font-medium">${themeName}</p>
-                </div>
-                <div class="text-right">
-                  <p class="text-xs text-gray-500 font-semibold">진행 상황</p>
-                  <p class="text-lg font-bold ${isWrongTest ? 'text-purple-400' : 'text-orange-400'}">${state.currentQuestion + 1} / ${questions.length}</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="bg-gray-900 rounded-2xl p-6 mb-6 shadow-xl border border-gray-800">
+            <div class="bg-[#141428] rounded-2xl p-6 mb-6 shadow-xl border border-[#1f2f3f]">
               <div class="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <div class="text-2xl font-bold text-green-400">${correctCount}</div>
@@ -4706,16 +4656,16 @@
                   <div class="text-xs text-gray-500 mt-1 font-medium">틀린 개수</div>
                 </div>
                 <div>
-                  <div class="text-2xl font-bold text-orange-400">${answeredCount}</div>
+                  <div class="text-2xl font-bold text-emerald-400">${answeredCount}</div>
                   <div class="text-xs text-gray-500 mt-1 font-medium">답변 완료</div>
                 </div>
               </div>
             </div>
 
-            <div class="bg-gray-900 rounded-2xl p-8 border border-gray-800 shadow-xl mb-6">
+            <div class="bg-[#141428] rounded-2xl p-8 border border-[#1f2f3f] shadow-xl mb-6">
               <div class="mb-8">
                 <div class="flex items-center justify-between mb-4">
-                  <span class="inline-block px-3 py-1 bg-orange-500/20 text-orange-400 rounded-lg text-xs font-bold">
+                  <span class="inline-block px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-bold">
                     문제 ${state.currentQuestion + 1}
                   </span>
                   ${!answer ? `
@@ -4766,7 +4716,7 @@
                     <button
                       onclick="toggleEraser()"
                       id="eraserBtn"
-                      class="text-xs px-3 py-1.5 rounded-lg transition-all font-bold ${state.isEraserMode ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
+                      class="text-xs px-3 py-1.5 rounded-lg transition-all font-bold ${state.isEraserMode ? 'bg-emerald-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}"
                     >
                       🧹 지우개
                     </button>
@@ -4789,10 +4739,10 @@
                   <div class="flex items-center gap-2">
                     <span class="text-gray-400 text-xs">색상:</span>
                     <div class="flex gap-1">
-                      ${['#000000', '#FF0000', '#0000FF', '#00AA00', '#FF6B00'].map(color => `
+                      ${['#000000', '#FF0000', '#0000FF', '#00AA00', '#059669'].map(color => `
                         <button
                           onclick="changePenColor('${color}')"
-                          class="w-6 h-6 rounded-full border-2 ${state.penColor === color ? 'border-orange-400 ring-2 ring-orange-400/50' : 'border-gray-600'} transition-all"
+                          class="w-6 h-6 rounded-full border-2 ${state.penColor === color ? 'border-emerald-400 ring-2 ring-emerald-400/50' : 'border-gray-600'} transition-all"
                           style="background-color: ${color};"
                         ></button>
                       `).join('')}
@@ -4805,7 +4755,7 @@
                       ${[2, 3, 5, 8].map(size => `
                         <button
                           onclick="changePenSize(${size})"
-                          class="w-6 h-6 rounded flex items-center justify-center text-xs ${state.penSize === size ? 'bg-orange-500 text-white' : 'bg-gray-700 text-gray-300'} transition-all"
+                          class="w-6 h-6 rounded flex items-center justify-center text-xs ${state.penSize === size ? 'bg-emerald-500 text-white' : 'bg-gray-700 text-gray-300'} transition-all"
                         >
                           ${size}
                         </button>
@@ -4872,7 +4822,7 @@
                   </p>
                 ` : `
                   <p class="text-sm text-gray-300 leading-relaxed font-medium">
-                    <span class="text-orange-400 font-bold">💡 힌트:</span> ${question.hint}
+                    <span class="text-emerald-400 font-bold">💡 힌트:</span> ${question.hint}
                   </p>
                 `}
                   ${state.userType === 'admin' ? `
@@ -4880,7 +4830,7 @@
                       <label class="text-sm text-gray-300 font-bold mb-2 block">📝 선생님 메모:</label>
                       <textarea
                         id="teacherNote-${state.currentQuestion}"
-                        class="w-full p-3 bg-gray-900/50 border border-gray-700 rounded-lg text-sm text-gray-300 focus:border-orange-500 focus:outline-none resize-none"
+                        class="w-full p-3 bg-[#141428]/50 border border-gray-700 rounded-lg text-sm text-gray-300 focus:border-emerald-500 focus:outline-none resize-none"
                         rows="3"
                         placeholder="이 문제에 대한 메모를 입력하세요..."
                       >${(() => {
@@ -4896,7 +4846,7 @@
             </div>
 
             <div class="flex gap-3">
-              <button id="prevBtn" class="flex items-center px-8 py-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/30 disabled:cursor-not-allowed rounded-xl font-bold transition-all border border-gray-700 disabled:border-gray-800 text-white disabled:text-gray-600 text-base transform hover:scale-105 active:scale-95 disabled:scale-100" ${state.currentQuestion === 0 ? 'disabled' : ''}>
+              <button id="prevBtn" class="flex items-center px-8 py-4 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800/30 disabled:cursor-not-allowed rounded-xl font-bold transition-all border border-gray-700 disabled:border-[#1f2f3f] text-white disabled:text-gray-600 text-base transform hover:scale-105 active:scale-95 disabled:scale-100" ${state.currentQuestion === 0 ? 'disabled' : ''}>
                 ${icon('chevronLeft', 'mr-1', 20)}이전
               </button>
 
@@ -4910,7 +4860,7 @@
 
               <button id="finishBtn" class="px-4 py-2 rounded-xl font-bold transition-all text-xs transform ${
                 isComplete
-                  ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/30 hover:scale-105 active:scale-95'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg shadow-emerald-500/30 hover:scale-105 active:scale-95'
                   : 'bg-gray-800/30 cursor-not-allowed border border-gray-700 text-gray-600 scale-100'
               }" ${!isComplete ? 'disabled' : ''}>
                 ${isComplete ? `완료 (${answeredCount}/${questions.length})` : '최소 1문제 이상'}
@@ -4921,10 +4871,10 @@
               <div class="mt-6 border-2 rounded-2xl p-6 shadow-xl ${
                 correctCount === answeredCount
                   ? 'bg-green-900/20 border-green-500/50'
-                  : 'bg-orange-900/20 border-orange-500/50'
+                  : 'bg-emerald-900/20 border-emerald-500/50'
               }">
                 <h3 class="text-xl font-bold mb-4 text-center ${
-                  correctCount === answeredCount ? 'text-green-400' : 'text-orange-400'
+                  correctCount === answeredCount ? 'text-green-400' : 'text-emerald-400'
                 }">
                   ${correctCount === answeredCount ? '🎉 완벽합니다!' : '저장 준비 완료!'}
                 </h3>
@@ -4933,7 +4883,7 @@
                 </p>
                 <p class="text-sm text-center mb-4 text-gray-300 font-medium">
                   정답률: <span class="font-bold text-lg ${
-                    correctCount === answeredCount ? 'text-green-400' : 'text-orange-400'
+                    correctCount === answeredCount ? 'text-green-400' : 'text-emerald-400'
                   }">
                     ${Math.round((correctCount / answeredCount) * 100)}%
                   </span>
@@ -5038,10 +4988,10 @@
       app.innerHTML = `
         <div class="min-h-screen p-6">
           <div class="max-w-5xl mx-auto">
-            <div class="bg-gray-900 rounded-2xl p-6 mb-6 shadow-xl border border-orange-500/30">
+            <div class="bg-[#141428] rounded-2xl p-6 mb-6 shadow-xl border border-emerald-500/30">
               <div class="flex items-center justify-between">
                 <div class="flex items-center">
-                  <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center mr-3">
+                  <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-full flex items-center justify-center mr-3">
                     ${icon('user', 'text-white')}
                   </div>
                   <div>
@@ -5057,7 +5007,7 @@
 
             ${state.recordSelectedCategory ? `
               <div class="mb-4">
-                <button id="allRecordsBtn" class="text-sm text-orange-500 hover:text-orange-400 flex items-center font-semibold">
+                <button id="allRecordsBtn" class="text-sm text-emerald-500 hover:text-emerald-400 flex items-center font-semibold">
                   ${icon('chevronLeft', '', 16)}챕터 선택으로 돌아가기
                 </button>
               </div>
@@ -5067,7 +5017,7 @@
               </h3>
 
               ${categoryAttempts.length === 0 ? `
-                <div class="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800">
+                <div class="bg-[#141428] rounded-2xl p-12 text-center border border-[#1f2f3f]">
                   ${icon('barChart', 'mx-auto mb-4 text-gray-600', 48)}
                   <p class="text-gray-400 font-medium">이 챕터의 학습 기록이 없습니다.</p>
                 </div>
@@ -5099,14 +5049,14 @@
                       const theme = category.chapters.find(t => t.id === lastAttempt.themeId);
 
                       return `
-                        <div class="bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-xl relative">
+                        <div class="bg-[#141428] rounded-2xl p-6 border border-[#1f2f3f] shadow-xl relative">
                           <div class="flex justify-between items-start mb-4">
                             <div>
                               <h3 class="text-base font-bold text-white mb-1">${lastAttempt.themeName}</h3>
                               <p class="text-xs text-gray-500">최종 시도: ${lastAttempt.date}</p>
                             </div>
                             <div class="text-right">
-                              <div class="text-2xl font-bold ${lastAttempt.percentage === 100 ? 'text-green-400' : 'text-orange-400'}">
+                              <div class="text-2xl font-bold ${lastAttempt.percentage === 100 ? 'text-green-400' : 'text-emerald-400'}">
                                 ${lastAttempt.percentage}%
                               </div>
                               <div class="text-xs text-gray-500 font-semibold">
@@ -5136,7 +5086,7 @@
                                   const secs = Math.floor((timeMs % 60000) / 1000);
                                   const timeStr = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}초`;
                                   return `
-                                    <div class="text-xs bg-gray-900/50 px-2 py-1 rounded">
+                                    <div class="text-xs bg-[#141428]/50 px-2 py-1 rounded">
                                       <span class="text-gray-400">Q${qIdx+1}:</span>
                                       <span class="text-purple-300 font-semibold ml-1">${timeStr}</span>
                                     </div>
@@ -5146,7 +5096,7 @@
                             </div>
                           ` : ''}
 
-                          <div class="grid grid-cols-4 gap-4 pt-4 border-t border-gray-800 mb-4">
+                          <div class="grid grid-cols-4 gap-4 pt-4 border-t border-[#1f2f3f] mb-4">
                             <div class="text-center">
                               <div class="text-lg font-bold text-green-400">${lastAttempt.correct}</div>
                               <div class="text-xs text-gray-500">맞힌 개수</div>
@@ -5174,7 +5124,7 @@
                             <button 
                               data-category="${lastAttempt.categoryId}" 
                               data-theme="${lastAttempt.themeId}" 
-                              class="retake-btn w-full mb-4 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-xl font-bold text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-orange-500/30"
+                              class="retake-btn w-full mb-4 px-6 py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-bold text-white transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-emerald-500/30"
                             >
                               🔥 재시험 도전하기
                             </button>
@@ -5194,7 +5144,7 @@
                                   ${icon('xCircle', 'mr-2', 18)}복습 필요 문제
                                 </span>
                                 ${isRetakeAvailable ? `
-                                  <span class="text-xs bg-orange-500/20 text-orange-400 px-2 py-1 rounded font-bold">
+                                  <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded font-bold">
                                     재시험 전 복습!
                                   </span>
                                 ` : ''}
@@ -5203,11 +5153,11 @@
                                 ${allWrongQuestions.map((wrongQ, idx) => {
                                   const questionData = theme.questions.find(q => q.question === wrongQ);
                                   return `
-                                    <div class="text-sm bg-gray-900/50 rounded-lg p-3 border border-red-500/20">
+                                    <div class="text-sm bg-[#141428]/50 rounded-lg p-3 border border-red-500/20">
                                       <p class="text-red-300 font-medium mb-2 leading-relaxed">• ${wrongQ}</p>
                                       ${isRetakeAvailable ? `
                                         <p class="text-gray-400 text-xs leading-relaxed">
-                                          <span class="text-orange-400 font-bold">💡 힌트:</span> ${questionData?.hint}
+                                          <span class="text-emerald-400 font-bold">💡 힌트:</span> ${questionData?.hint}
                                         </p>
                                       ` : `
                                         <p class="text-gray-400 text-xs leading-relaxed">
@@ -5258,7 +5208,7 @@
                                     if (!q) return '';
 
                                     return `
-                                      <div class="bg-gray-900/50 rounded-lg p-3 border border-gray-700">
+                                      <div class="bg-[#141428]/50 rounded-lg p-3 border border-gray-700">
                                         <div class="flex items-center justify-between mb-2">
                                           <p class="text-sm text-gray-300 font-medium">문제 ${idx + 1}</p>
                                           ${answer ? `
@@ -5277,8 +5227,8 @@
                                         ` : ''}
 
                                         ${teacherNote ? `
-                                          <div class="bg-orange-900/20 border border-orange-500/30 rounded p-2">
-                                            <p class="text-xs text-orange-400 font-semibold mb-1">📝 선생님 메모:</p>
+                                          <div class="bg-emerald-900/20 border border-emerald-500/30 rounded p-2">
+                                            <p class="text-xs text-emerald-400 font-semibold mb-1">📝 선생님 메모:</p>
                                             <p class="text-xs text-gray-300 leading-relaxed">${teacherNote}</p>
                                           </div>
                                         ` : ''}
@@ -5296,7 +5246,7 @@
                 </div>
               `}
             ` : currentStudentAttempts.length === 0 ? `
-              <div class="bg-gray-900 rounded-2xl p-12 text-center border border-gray-800">
+              <div class="bg-[#141428] rounded-2xl p-12 text-center border border-[#1f2f3f]">
                 ${icon('barChart', 'mx-auto mb-4 text-gray-600', 48)}
                 <p class="text-gray-400 font-medium">아직 학습 기록이 없습니다.</p>
               </div>
@@ -5307,11 +5257,11 @@
                   const avgPercentage = Math.round(catAttempts.reduce((sum, a) => sum + a.percentage, 0) / catAttempts.length);
                   
                   return `
-                    <button data-cat="${cat.id}" class="cat-record-btn bg-gray-900 rounded-2xl p-6 border border-gray-800 shadow-xl hover:shadow-orange-500/20 hover:border-orange-500/50 transition-all text-left transform hover:scale-105 active:scale-95">
+                    <button data-cat="${cat.id}" class="cat-record-btn bg-[#141428] rounded-2xl p-6 border border-[#1f2f3f] shadow-xl hover:shadow-emerald-500/20 hover:border-emerald-500/50 transition-all text-left transform hover:scale-105 active:scale-95">
                       <h3 class="text-base font-bold text-white mb-2">${cat.name}</h3>
                       <div class="flex items-center justify-between">
                         <span class="text-xs text-gray-500 font-semibold">평균 정답률</span>
-                        <span class="text-lg font-bold text-orange-400">${avgPercentage}%</span>
+                        <span class="text-lg font-bold text-emerald-400">${avgPercentage}%</span>
                       </div>
                       <div class="text-xs text-gray-500 mt-2 font-medium">
                         시도 횟수: ${catAttempts.length}회
