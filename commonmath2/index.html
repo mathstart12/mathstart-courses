@@ -394,6 +394,20 @@
     return (state.allStudentData[docId]?.attempts || []).filter(a => a.lectureId === lectureId);
   }
 
+  // 구두테스트 점수(맞은 수 / 푼 수) + 진행률(푼 수 / 전체 문제) 계산. 구버전 기록도 호환.
+  function attemptMetrics(a) {
+    const answered = (a.answered != null) ? a.answered : (a.total != null ? a.total : 0);
+    let totalQ = a.totalQuestions;
+    if (totalQ == null) {
+      const lec = lectures.find(l => l.id === a.lectureId);
+      totalQ = lec ? lec.questions.length : answered;
+    }
+    const correct = a.correct || 0;
+    const score = (a.score != null) ? a.score : (answered > 0 ? Math.round(correct / answered * 100) : 0);
+    const progress = (a.progress != null) ? a.progress : (totalQ > 0 ? Math.round(answered / totalQ * 100) : 0);
+    return { answered, totalQ, correct, score, progress };
+  }
+
   // ────────────────────────────────────────────────
   // 타이머
   // ────────────────────────────────────────────────
@@ -593,7 +607,7 @@
       const attempts = getAttemptsForLecture(lec.id);
       const latest = attempts.length ? attempts[attempts.length - 1] : null;
       const hasQ = lec.questions.length > 0;
-      const pct = latest ? Math.round(latest.correct / latest.total * 100) : null;
+      const m = latest ? attemptMetrics(latest) : null;
       const passed = latest && latest.oralTestPassed;
       return `
         <div onclick="${hasQ ? `startLecture(${lec.id})` : ''}"
@@ -606,7 +620,7 @@
           </div>
           ${!hasQ ? '<p style="color:#4b5563;font-size:0.78rem">준비 중</p>' : `
             <p style="color:#6b7280;font-size:0.78rem">${lec.questions.length}개 문제</p>
-            ${latest ? `<p style="color:#f97316;font-size:0.85rem;font-weight:700;margin-top:0.4rem">${pct}% <span style="color:#6b7280;font-size:0.75rem">(${latest.correct}/${latest.total})</span></p>` : ''}
+            ${latest ? `<p style="color:#f97316;font-size:0.85rem;font-weight:700;margin-top:0.4rem">${m.score}점 <span style="color:#6b7280;font-size:0.75rem">(정답 ${m.correct}/${m.answered} · 진행 ${m.progress}%)</span></p>` : ''}
           `}
         </div>`;
     }).join('');
@@ -774,11 +788,12 @@
 
   function renderQuizResult() {
     const lec = state.selectedLecture;
-    const total = lec.questions.length;
+    const totalQ = lec.questions.length;
     const answered = Object.keys(state.answers).length;
     const correct = lec.questions.filter((q, i) => state.answers[i] === q.answer).length;
-    const pct = total > 0 ? Math.round(correct / total * 100) : 0;
-    const passed = pct >= 80;
+    const score = answered > 0 ? Math.round(correct / answered * 100) : 0;   // 구두테스트 점수(맞은 수/푼 수)
+    const progress = totalQ > 0 ? Math.round(answered / totalQ * 100) : 0;   // 진행률(푼 수/전체)
+    const passed = score >= 80;
     const isAdmin = state.userType === 'admin';
 
     const app = document.getElementById('app');
@@ -787,9 +802,11 @@
       ${headerHTML(isAdmin ? state.adminName : state.studentName, state.userType)}
       <div style="max-width:700px;margin:2rem auto;padding:1.5rem">
         <div style="background:#141428;border:1px solid ${passed?'#10b981':'#374151'};border-radius:1.5rem;padding:2rem;text-align:center;margin-bottom:1.5rem">
-          <div style="font-size:3rem;font-weight:900;color:${passed?'#10b981':'#f97316'};margin-bottom:0.5rem">${pct}%</div>
-          <div style="color:#9ca3af;font-size:0.9rem;margin-bottom:0.25rem">${correct} / ${total} 정답</div>
+          <div style="color:#6b7280;font-size:0.8rem;font-weight:700;margin-bottom:0.35rem">구두테스트 점수</div>
+          <div style="font-size:3rem;font-weight:900;color:${passed?'#10b981':'#f97316'};line-height:1">${score}점</div>
+          <div style="color:#9ca3af;font-size:0.9rem;margin-top:0.5rem">정답 ${correct} / ${answered} <span style="color:#6b7280;font-size:0.78rem">(푼 문제 기준)</span></div>
           <div style="color:${passed?'#10b981':'#f97316'};font-size:0.85rem;font-weight:700;margin-top:0.5rem">${lec.name} 구두테스트 ${passed?'통과 🎉':'미통과'}</div>
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #1f2f3f;color:#9ca3af;font-size:0.85rem">진행률 <span style="color:#60a5fa;font-weight:800">${progress}%</span> <span style="color:#6b7280;font-size:0.78rem">(${answered} / ${totalQ} 문제)</span></div>
         </div>
 
         <!-- 액션 버튼 (상단) -->
@@ -802,15 +819,17 @@
         <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
           ${lec.questions.map((q, i) => {
             const ans = state.answers[i];
+            const answeredThis = ans !== undefined;
             const isCorrect = ans === q.answer;
             const sData = state.questionStrokes[i];
             const cid = 'res_' + i;
             if (sData) state._draw.push({ id: cid, data: sData });
+            const bd = !answeredThis ? 'rgba(107,114,128,0.3)' : (isCorrect ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)');
             return `
-              <div style="background:#141428;border:1px solid ${isCorrect?'rgba(16,185,129,0.3)':'rgba(239,68,68,0.3)'};border-radius:0.875rem;padding:1rem">
+              <div style="background:#141428;border:1px solid ${bd};border-radius:0.875rem;padding:1rem">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
                   <span style="color:#9ca3af;font-size:0.8rem">문제 ${i+1}</span>
-                  <span style="color:${isCorrect?'#10b981':'#ef4444'};font-weight:700;font-size:0.85rem">${isCorrect?'✓ 정답':'✗ 오답'}</span>
+                  <span style="color:${!answeredThis?'#6b7280':(isCorrect?'#10b981':'#ef4444')};font-weight:700;font-size:0.85rem">${!answeredThis?'— 미응답':(isCorrect?'✓ 정답':'✗ 오답')}</span>
                 </div>
                 <div style="font-size:0.85rem;color:#e5e7eb;margin-bottom:0.4rem" class="math-text">${q.question}</div>
                 ${q.hint ? `<div style="color:#6b7280;font-size:0.78rem;margin-top:0.3rem">💡 ${q.hint}</div>` : ''}
@@ -851,7 +870,7 @@
             <p style="color:#6b7280">아직 학습 기록이 없습니다.</p>
           </div>` : sorted.map(a => {
           const lec = lectures.find(l => l.id === a.lectureId);
-          const pct = Math.round(a.correct / a.total * 100);
+          const m = attemptMetrics(a);
           const date = new Date(a.date).toLocaleDateString('ko-KR');
           const time = new Date(a.date).toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
           const expanded = !!state.expandedAttempts[a.date];
@@ -891,8 +910,8 @@
                   <div style="color:#6b7280;font-size:0.78rem">${date} ${time}</div>
                 </div>
                 <div style="text-align:right">
-                  <div style="font-size:1.3rem;font-weight:900;color:${pct>=80?'#10b981':'#f97316'}">${pct}%</div>
-                  <div style="color:#6b7280;font-size:0.75rem">${a.correct}/${a.total}</div>
+                  <div style="font-size:1.3rem;font-weight:900;color:${m.score>=80?'#10b981':'#f97316'}">${m.score}점</div>
+                  <div style="color:#6b7280;font-size:0.75rem">정답 ${m.correct}/${m.answered} · 진행 ${m.progress}%</div>
                 </div>
               </div>
               ${detail}
@@ -982,18 +1001,24 @@
     stopTimer();
 
     const correct = lec.questions.filter((q, i) => state.answers[i] === q.answer).length;
-    const pct = Math.round(correct / total * 100);
+    const score = answeredCount > 0 ? Math.round(correct / answeredCount * 100) : 0;   // 구두테스트 점수(맞은 수/푼 수)
+    const progress = total > 0 ? Math.round(answeredCount / total * 100) : 0;           // 진행률(푼 수/전체)
     const attempt = {
       lectureId: lec.id,
       lectureName: lec.name,
       date: new Date().toISOString(),
       correct,
-      total: answeredCount,
-      percentage: pct,
-      oralTestPassed: pct >= 80,
+      answered: answeredCount,
+      totalQuestions: total,
+      score,
+      progress,
+      oralTestPassed: score >= 80,
       answers: state.answers,
       questionTimes: state.questionTimes,
       questionStrokes: state.questionStrokes,
+      // 구버전 호환 필드
+      total: answeredCount,
+      percentage: score,
     };
 
     await saveAttempt(attempt);
