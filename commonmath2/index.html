@@ -360,6 +360,7 @@
     questionElapsed: 0,
     timerRunning: false,
     questionTimes: {},      // { questionIdx: seconds }
+    lockedAnswers: {},      // { questionIdx: true } 이미 제출된(채점된) 문제 → 수정 불가
     questionStrokes: {},    // { questionIdx: { strokes:[{p:[x,y,...],c,w}], w, h } }
     _draw: [],              // 렌더 후 그릴 캔버스 목록 { id, data }
   };
@@ -713,6 +714,7 @@
     const idx = state.currentQuestion;
     const answered = state.answers[idx];
     const answeredCount = Object.keys(state.answers).length;
+    const locked = !!state.lockedAnswers[idx];
     const isAdmin = state.userType === 'admin';
 
     const app = document.getElementById('app');
@@ -766,10 +768,11 @@
         </div>
 
         <!-- OX 버튼 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">
-          <button onclick="handleAnswer('O')" style="padding:1.25rem;border-radius:1rem;font-size:1.5rem;font-weight:900;font-family:inherit;border:2px solid ${answered==='O'?'#10b981':'#374151'};background:${answered==='O'?'rgba(16,185,129,0.15)':'#141428'};color:${answered==='O'?'#10b981':'#9ca3af'};cursor:pointer;transition:all 0.15s">O</button>
-          <button onclick="handleAnswer('X')" style="padding:1.25rem;border-radius:1rem;font-size:1.5rem;font-weight:900;font-family:inherit;border:2px solid ${answered==='X'?'#ef4444':'#374151'};background:${answered==='X'?'rgba(239,68,68,0.15)':'#141428'};color:${answered==='X'?'#ef4444':'#9ca3af'};cursor:pointer;transition:all 0.15s">X</button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.5rem">
+          <button ${locked?'':`onclick="handleAnswer('O')"`} style="padding:1.25rem;border-radius:1rem;font-size:1.5rem;font-weight:900;font-family:inherit;border:2px solid ${answered==='O'?'#10b981':'#374151'};background:${answered==='O'?'rgba(16,185,129,0.15)':'#141428'};color:${answered==='O'?'#10b981':'#9ca3af'};cursor:${locked?'default':'pointer'};opacity:${locked&&answered!=='O'?'0.35':'1'};transition:all 0.15s">O</button>
+          <button ${locked?'':`onclick="handleAnswer('X')"`} style="padding:1.25rem;border-radius:1rem;font-size:1.5rem;font-weight:900;font-family:inherit;border:2px solid ${answered==='X'?'#ef4444':'#374151'};background:${answered==='X'?'rgba(239,68,68,0.15)':'#141428'};color:${answered==='X'?'#ef4444':'#9ca3af'};cursor:${locked?'default':'pointer'};opacity:${locked&&answered!=='X'?'0.35':'1'};transition:all 0.15s">X</button>
         </div>
+        <div style="text-align:center;font-size:0.75rem;margin-bottom:1.25rem;color:${locked?'#f59e0b':'#4b5563'}">${locked?'🔒 이미 제출·채점된 문제입니다 (수정 불가)':'답을 선택하면 저장됩니다'}</div>
 
         <!-- 이전/다음 -->
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
@@ -812,7 +815,10 @@
         <!-- 액션 버튼 (상단) -->
         <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem">
           <button onclick="backToLectureList()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:#fff;cursor:pointer">← 강의 목록</button>
-          <button onclick="retryLecture()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;cursor:pointer">다시 풀기</button>
+          ${answered >= totalQ
+            ? `<button disabled style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:#6b7280;cursor:not-allowed">모두 완료 ✓</button>`
+            : `<button onclick="resumeLecture()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;cursor:pointer">이어서 풀기 (남은 ${totalQ - answered}문제)</button>`
+          }
         </div>
 
         <!-- 문제별 결과 -->
@@ -944,18 +950,23 @@
     const lec = lectures.find(l => l.id === id);
     if (!lec || lec.questions.length === 0) return;
     state.selectedLecture = lec;
-    state.currentQuestion = 0;
-    state.answers = {};
+    // 이전에 제출한 진행(가장 최근 기록)을 불러와 이어서 풀기
+    const prev = getLatestAttempt(id);
+    state.answers = (prev && prev.answers) ? Object.assign({}, prev.answers) : {};
+    state.questionStrokes = (prev && prev.questionStrokes) ? Object.assign({}, prev.questionStrokes) : {};
+    state.questionTimes = (prev && prev.questionTimes) ? Object.assign({}, prev.questionTimes) : {};
+    state.lockedAnswers = {};
+    Object.keys(state.answers).forEach(k => { state.lockedAnswers[k] = true; }); // 이미 푼 문제는 잠금
     state.quizCompleted = false;
-    state.canvasStrokes = [];
-    state.questionTimes = {};
-    state.questionStrokes = {};
+    state.currentQuestion = firstUnansweredIndex(lec);
+    state.canvasStrokes = loadStrokesFor(state.currentQuestion);
     resetTimer();
     render();
     window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   function handleAnswer(ans) {
+    if (state.lockedAnswers[state.currentQuestion]) return; // 이미 채점된 문제는 수정 불가
     state.answers[state.currentQuestion] = ans;
     render();
   }
@@ -963,6 +974,18 @@
   function toggleAttempt(dateKey) {
     state.expandedAttempts[dateKey] = !state.expandedAttempts[dateKey];
     render();
+  }
+
+  function getLatestAttempt(lectureId) {
+    const arr = getAttemptsForLecture(lectureId);
+    return arr.length ? arr[arr.length - 1] : null;
+  }
+
+  function firstUnansweredIndex(lec) {
+    for (let i = 0; i < lec.questions.length; i++) {
+      if (state.answers[i] === undefined) return i;
+    }
+    return 0; // 전부 답변됨
   }
 
   function handleNext() {
@@ -1022,6 +1045,8 @@
     };
 
     await saveAttempt(attempt);
+    // 제출한 답변은 모두 잠금(재풀이 불가) → 이어서 풀기 시 미답변만 풀 수 있음
+    Object.keys(state.answers).forEach(k => { state.lockedAnswers[k] = true; });
     state.quizCompleted = true;
     render();
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1031,6 +1056,7 @@
     state.selectedLecture = null;
     state.quizCompleted = false;
     state.answers = {};
+    state.lockedAnswers = {};
     state.canvasStrokes = [];
     state.questionStrokes = {};
     state.questionTimes = {};
@@ -1041,21 +1067,18 @@
   }
 
   function exitQuiz() {
-    const hasProgress = Object.keys(state.answers).length > 0
-      || Object.keys(state.questionStrokes).length > 0
+    const hasNew = Object.keys(state.answers).some(k => !state.lockedAnswers[k])
       || (state.canvasStrokes && state.canvasStrokes.length > 0);
-    if (hasProgress && !confirm('진행 중인 답변·필기가 저장되지 않고 사라집니다.\n강의 목록으로 돌아갈까요?')) return;
+    if (hasNew && !confirm('제출하지 않은 이번 답변·필기는 저장되지 않습니다.\n강의 목록으로 돌아갈까요?')) return;
     backToLectureList();
   }
 
-  function retryLecture() {
+  // 이어서 풀기: 이전 답변·필기를 유지한 채, 아직 안 푼 문제만 풀도록 재개
+  function resumeLecture() {
     const lec = state.selectedLecture;
-    state.currentQuestion = 0;
-    state.answers = {};
     state.quizCompleted = false;
-    state.canvasStrokes = [];
-    state.questionTimes = {};
-    state.questionStrokes = {};
+    state.currentQuestion = firstUnansweredIndex(lec);
+    state.canvasStrokes = loadStrokesFor(state.currentQuestion);
     resetTimer();
     render();
     window.scrollTo({ top: 0, behavior: 'instant' });
