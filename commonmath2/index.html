@@ -757,7 +757,7 @@
         <!-- 이전/다음 -->
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
           <button onclick="handlePrev()" ${idx===0?'disabled':''} style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:${idx===0?'#4b5563':'#fff'};cursor:${idx===0?'not-allowed':'pointer'}">← 이전</button>
-          <button onclick="handleNext()" ${idx===total-1?'disabled':''} style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid ${idx===total-1?'#374151':'#10b981'};background:#141428;color:${idx===total-1?'#4b5563':'#10b981'};cursor:${idx===total-1?'not-allowed':'pointer'}">다음 →</button>
+          <button onclick="handleNext()" ${idx===total-1?'disabled':''} style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:${idx===total-1?'#4b5563':'#fff'};cursor:${idx===total-1?'not-allowed':'pointer'}">다음 →</button>
         </div>
 
         <!-- 제출하기 (항상 노출) -->
@@ -789,6 +789,12 @@
           <div style="color:${passed?'#10b981':'#f97316'};font-size:0.85rem;font-weight:700;margin-top:0.5rem">${lec.name} 구두테스트 ${passed?'통과 🎉':'미통과'}</div>
         </div>
 
+        <!-- 액션 버튼 (상단) -->
+        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem">
+          <button onclick="backToLectureList()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:#fff;cursor:pointer">← 강의 목록</button>
+          <button onclick="retryLecture()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;cursor:pointer">다시 풀기</button>
+        </div>
+
         <!-- 문제별 결과 -->
         <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
           ${lec.questions.map((q, i) => {
@@ -808,11 +814,6 @@
                 ${sData ? `<div style="color:#6b7280;font-size:0.72rem;margin:0.5rem 0 0.25rem">✏ 필기</div><canvas id="${cid}" style="width:100%;display:block;border-radius:0.5rem;background:#fff"></canvas>` : ''}
               </div>`;
           }).join('')}
-        </div>
-
-        <div style="display:flex;gap:0.75rem">
-          <button onclick="backToLectureList()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:#fff;cursor:pointer">← 강의 목록</button>
-          <button onclick="retryLecture()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;cursor:pointer">다시 풀기</button>
         </div>
       </div>`;
 
