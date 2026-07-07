@@ -570,6 +570,10 @@
     if (state.quizCompleted) {
       renderQuizResult(); return;
     }
+    // 학생은 학습 기록만 볼 수 있음 (구두테스트는 선생님이 진행)
+    if (state.userType === 'student') {
+      renderRecords(); return;
+    }
     if (state.showRecords) {
       renderRecords(); return;
     }
@@ -851,6 +855,7 @@
 
   function renderRecords() {
     const isAdmin = state.userType === 'admin';
+    const isStudent = state.userType === 'student';
     const docId = isAdmin && state.selectedStudent
       ? state.selectedStudent.id
       : `${state.studentName}_${state.phone}`;
@@ -867,13 +872,15 @@
             ${isAdmin && state.selectedStudent ? state.selectedStudent.studentName + ' 학생의 ' : ''}학습 기록
           </h2>
           <div style="display:flex;gap:0.5rem">
+            <button onclick="loadStudentDataAndRender()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">🔄 새로고침</button>
             <button onclick="goBackToHome()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">← 과목 선택</button>
-            <button onclick="state.showRecords=false;render()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">강의 목록</button>
+            ${isStudent ? '' : `<button onclick="state.showRecords=false;render()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">강의 목록</button>`}
           </div>
         </div>
         ${sorted.length === 0 ? `
           <div style="background:#141428;border:1px solid #1f1f35;border-radius:1rem;padding:3rem;text-align:center">
             <p style="color:#6b7280">아직 학습 기록이 없습니다.</p>
+            ${isStudent ? `<p style="color:#4b5563;font-size:0.82rem;margin-top:0.5rem">선생님이 구두테스트를 진행하면 이곳에 기록이 표시됩니다.</p>` : ''}
           </div>` : sorted.map(a => {
           const lec = lectures.find(l => l.id === a.lectureId);
           const m = attemptMetrics(a);
@@ -947,6 +954,7 @@
   // 이벤트 핸들러
   // ────────────────────────────────────────────────
   function startLecture(id) {
+    if (state.userType === 'student') return; // 학생은 스스로 테스트를 시작할 수 없음 (선생님이 진행)
     const lec = lectures.find(l => l.id === id);
     if (!lec || lec.questions.length === 0) return;
     state.selectedLecture = lec;
