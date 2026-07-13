@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>미적분1 — 구두테스트</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { min-height: 100vh; background: #0f0f1a; font-family: 'Noto Sans KR', sans-serif; color: #fff; }
+    #app { min-height: 100vh; }
+    .btn { border: none; cursor: pointer; font-family: inherit; font-weight: 700; transition: all 0.15s; }
+    .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn:active { transform: scale(0.97); }
+    .badge { display: inline-block; padding: 0.25rem 0.7rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCtS_FVILl8WC_ikOWw0Hgl8MSjdH-jSGc",
+    authDomain: "ox-quiz-math.firebaseapp.com",
+    projectId: "ox-quiz-math",
+    storageBucket: "ox-quiz-math.firebasestorage.app",
+    messagingSenderId: "1065273366803",
+    appId: "1:1065273366803:web:49d4f836f185af67d1e2e6"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // ────────────────────────────────────────────────
+  // 강의 데이터 (문제 추가 방법: questions 배열에 항목 추가)
+  // { question: "Q1. 문제 내용 (LaTeX: \\(...\\))", answer: "O" or "X", hint: "", explanation: "" }
+  // ────────────────────────────────────────────────
+  const lectures = [
+    { id: 1, name: "1강", questions: [] },
+    { id: 2, name: "2강", questions: [] },
+    { id: 3, name: "3강", questions: [] },
+    { id: 4, name: "4강", questions: [] },
+    { id: 5, name: "5강", questions: [] },
+    { id: 6, name: "6강", questions: [] },
+    { id: 7, name: "7강", questions: [] },
+    { id: 8, name: "8강", questions: [] },
+    { id: 9, name: "9강", questions: [] },
+    { id: 10, name: "10강", questions: [] },
+    { id: 11, name: "11강", questions: [] },
+    { id: 12, name: "12강", questions: [] },
+    { id: 13, name: "13강", questions: [] },
+    { id: 14, name: "14강", questions: [] },
+    { id: 15, name: "15강", questions: [] },
+    { id: 16, name: "16강", questions: [] },
+    { id: 17, name: "17강", questions: [] },
+    { id: 18, name: "18강", questions: [] },
+    { id: 19, name: "19강", questions: [] },
+    { id: 20, name: "20강", questions: [] },
+    { id: 21, name: "21강", questions: [] },
+    { id: 22, name: "22강", questions: [] },
+    { id: 23, name: "23강", questions: [] },
+    { id: 24, name: "24강", questions: [] },
+    { id: 25, name: "25강", questions: [] },
+    { id: 26, name: "26강", questions: [] },
+  ];
+
+  // ────────────────────────────────────────────────
+  // 상태
+  // ────────────────────────────────────────────────
+  const state = {
+    // 공통
+    userType: null,       // 'student' | 'admin'
+    studentName: '',
+    phone: '',
+    adminName: '',
+    // 선생님 모드
+    selectedStudent: null,  // { id, studentName, phone, ... }
+    // 퀴즈
+    selectedLecture: null,  // lecture 객체
+    currentQuestion: 0,
+    answers: {},            // { questionIdx: 'O'|'X' }
+    quizCompleted: false,
+    // 학습기록
+    showRecords: false,
+    allStudentData: {},     // { studentDocId: { attempts: [...] } }
+    expandedAttempts: {},
+    // 캔버스
+    canvasStrokes: [],
+    penColor: '#000000',
+    penSize: 3,
+    isEraserMode: false,
+    currentCanvas: null,
+    // 타이머
+    timerInterval: null,
+    questionStartTime: null,
+    questionElapsed: 0,
+    timerRunning: false,
+    questionTimes: {},      // { questionIdx: seconds }
+    lockedAnswers: {},      // { questionIdx: true } 이미 제출된(채점된) 문제 → 수정 불가
+    questionStrokes: {},    // { questionIdx: { strokes:[{p:[x,y,...],c,w}], w, h } }
+    _draw: [],              // 렌더 후 그릴 캔버스 목록 { id, data }
+  };
+
+  // ────────────────────────────────────────────────
+  // Firebase 데이터
+  // ────────────────────────────────────────────────
+  async function loadStudentData(docId) {
+    try {
+      const doc = await db.collection('oral-test-students').doc(docId).get();
+      if (doc.exists) {
+        const d = doc.data();
+        state.allStudentData[docId] = { attempts: d.calc1Attempts || [] };
+      }
+    } catch(e) { console.warn('데이터 로드 실패:', e); }
+  }
+
+  async function saveAttempt(attempt) {
+    const docId = state.selectedStudent ? state.selectedStudent.id : `${state.studentName}_${state.phone}`;
+    try {
+      const ref = db.collection('oral-test-students').doc(docId);
+      const doc = await ref.get();
+      const existing = doc.exists ? (doc.data().calc1Attempts || []) : [];
+      existing.push(attempt);
+      await ref.set({ calc1Attempts: existing }, { merge: true });
+      state.allStudentData[docId] = { attempts: existing };
+    } catch(e) { console.warn('저장 실패:', e); }
+  }
+
+  function getAttemptsForLecture(lectureId) {
+    const docId = state.selectedStudent ? state.selectedStudent.id : `${state.studentName}_${state.phone}`;
+    return (state.allStudentData[docId]?.attempts || []).filter(a => a.lectureId === lectureId);
+  }
+
+  // 구두테스트 점수(맞은 수 / 푼 수) + 진행률(푼 수 / 전체 문제) 계산. 구버전 기록도 호환.
+  function attemptMetrics(a) {
+    const answered = (a.answered != null) ? a.answered : (a.total != null ? a.total : 0);
+    let totalQ = a.totalQuestions;
+    if (totalQ == null) {
+      const lec = lectures.find(l => l.id === a.lectureId);
+      totalQ = lec ? lec.questions.length : answered;
+    }
+    const correct = a.correct || 0;
+    const score = (a.score != null) ? a.score : (answered > 0 ? Math.round(correct / answered * 100) : 0);
+    const progress = (a.progress != null) ? a.progress : (totalQ > 0 ? Math.round(answered / totalQ * 100) : 0);
+    return { answered, totalQ, correct, score, progress };
+  }
+
+  // ────────────────────────────────────────────────
+  // 타이머
+  // ────────────────────────────────────────────────
+  function startTimer() {
+    if (state.timerRunning) return;
+    state.timerRunning = true;
+    state.questionStartTime = Date.now() - (state.questionElapsed * 1000);
+    state.timerInterval = setInterval(() => {
+      state.questionElapsed = Math.floor((Date.now() - state.questionStartTime) / 1000);
+      const el = document.getElementById('timerDisplay');
+      if (el) el.textContent = formatTime(state.questionElapsed);
+    }, 500);
+  }
+
+  function stopTimer() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.timerInterval = null;
+    state.timerRunning = false;
+  }
+
+  function resetTimer() {
+    stopTimer();
+    state.questionElapsed = 0;
+    state.questionStartTime = null;
+  }
+
+  function saveQuestionTime(idx) {
+    state.questionTimes[idx] = state.questionElapsed;
+  }
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  // ────────────────────────────────────────────────
+  // 캔버스
+  // ────────────────────────────────────────────────
+  function initCanvas(id) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    canvas.style.width = rect.width + 'px';
+    canvas.style.height = rect.height + 'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = state.penColor;
+    ctx.lineWidth = state.penSize;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    state.currentCanvas = canvas;
+    setupCanvasEvents(id);
+    redrawCanvas();
+  }
+
+  function redrawCanvas() {
+    const canvas = state.currentCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+    for (const stroke of state.canvasStrokes) {
+      if (stroke.points.length < 2) continue;
+      ctx.strokeStyle = stroke.color;
+      ctx.lineWidth = stroke.width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
+      for (let i = 1; i < stroke.points.length; i++) ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
+      ctx.stroke();
+    }
+  }
+
+  function findStrokeAtPoint(x, y) {
+    const t = 10;
+    for (let i = state.canvasStrokes.length - 1; i >= 0; i--) {
+      for (const p of state.canvasStrokes[i].points) {
+        if (Math.hypot(p.x - x, p.y - y) < t) return i;
+      }
+    }
+    return -1;
+  }
+
+  function setupCanvasEvents(id) {
+    const canvas = document.getElementById(id);
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let currentStroke = null;
+    canvas.style.touchAction = 'pan-y pan-x';
+
+    function isPenOrMouse(e) { return e.pointerType === 'pen' || e.pointerType === 'mouse'; }
+    function getCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      if (!isPenOrMouse(e)) return;
+      e.preventDefault();
+      canvas.setPointerCapture(e.pointerId);
+      const c = getCoords(e);
+      isDrawing = true;
+      if (state.isEraserMode) {
+        const i = findStrokeAtPoint(c.x, c.y);
+        if (i !== -1) { state.canvasStrokes.splice(i, 1); redrawCanvas(); }
+      } else {
+        currentStroke = { points: [c], color: state.penColor, width: state.penSize };
+      }
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!isDrawing || !isPenOrMouse(e)) return;
+      e.preventDefault();
+      const c = getCoords(e);
+      if (state.isEraserMode) {
+        const i = findStrokeAtPoint(c.x, c.y);
+        if (i !== -1) { state.canvasStrokes.splice(i, 1); redrawCanvas(); }
+      } else {
+        currentStroke.points.push(c);
+        const prev = currentStroke.points[currentStroke.points.length - 2];
+        ctx.strokeStyle = currentStroke.color;
+        ctx.lineWidth = currentStroke.width;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+      }
+    });
+
+    const stopDraw = () => {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (!state.isEraserMode && currentStroke && currentStroke.points.length > 0) {
+        state.canvasStrokes.push(currentStroke);
+      }
+      currentStroke = null;
+    };
+    canvas.addEventListener('pointerup', stopDraw);
+    canvas.addEventListener('pointercancel', stopDraw);
+    canvas.addEventListener('pointerleave', stopDraw);
+  }
+
+  // ────────────────────────────────────────────────
+  // 렌더링
+  // ────────────────────────────────────────────────
+  function render() {
+    if (!state.userType) { redirectToHome(); return; }
+
+    if (state.selectedLecture && !state.quizCompleted) {
+      renderQuiz(); return;
+    }
+    if (state.quizCompleted) {
+      renderQuizResult(); return;
+    }
+    // 학생은 학습 기록만 볼 수 있음 (구두테스트는 선생님이 진행)
+    if (state.userType === 'student') {
+      renderRecords(); return;
+    }
+    if (state.showRecords) {
+      renderRecords(); return;
+    }
+    renderLectureList();
+  }
+
+  function redirectToHome() { window.location.href = '/'; }
+
+  function headerHTML(name, role) {
+    const badge = role === 'admin'
+      ? `<span style="background:rgba(249,115,22,0.15);border:1px solid rgba(249,115,22,0.4);border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#fb923c;font-weight:700">${name} 선생님</span>`
+      : `<span style="background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.4);border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#818cf8;font-weight:700">${name} 학생</span>`;
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:1rem 1.5rem;border-bottom:1px solid #1f1f35;background:#0f0f1a;position:sticky;top:0;z-index:10">
+        <div style="display:flex;align-items:center;gap:0.75rem">
+          <span style="font-size:1.1rem;font-weight:800;color:#fff">미적분<span style="color:#10b981">1</span></span>
+          ${badge}
+        </div>
+        <button onclick="doLogout()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='#374151';this.style.color='#fff'" onmouseout="this.style.background='#1f2937';this.style.color='#9ca3af'">로그아웃</button>
+      </div>`;
+  }
+
+  function renderLectureList() {
+    const app = document.getElementById('app');
+    const isAdmin = state.userType === 'admin';
+    const studentLabel = isAdmin && state.selectedStudent
+      ? `<p style="color:#6b7280;font-size:0.88rem;margin:1rem 1.5rem 0">${state.selectedStudent.studentName} 학생의 구두테스트</p>`
+      : `<p style="color:#6b7280;font-size:0.88rem;margin:1rem 1.5rem 0">수강하려는 강의를 선택하세요</p>`;
+
+    const backBtn = `
+      <button onclick="goBackToHome()" style="margin:1rem 1.5rem 0;display:inline-flex;align-items:center;gap:0.4rem;background:none;border:none;color:#10b981;font-size:0.85rem;font-family:inherit;font-weight:700;cursor:pointer">
+        ← 과목 선택으로
+      </button>`;
+
+    const cards = lectures.map(lec => {
+      const attempts = getAttemptsForLecture(lec.id);
+      const latest = attempts.length ? attempts[attempts.length - 1] : null;
+      const hasQ = lec.questions.length > 0;
+      const m = latest ? attemptMetrics(latest) : null;
+      const passed = latest && latest.oralTestPassed;
+      return `
+        <div onclick="${hasQ ? `startLecture(${lec.id})` : ''}"
+          style="background:#141428;border:1px solid ${passed ? '#10b981' : hasQ ? '#1f2f3f' : '#1a1a2e'};border-radius:1rem;padding:1.5rem;cursor:${hasQ ? 'pointer' : 'default'};transition:all 0.18s;opacity:${hasQ ? '1' : '0.45'}"
+          onmouseover="${hasQ ? "this.style.borderColor='#10b981';this.style.transform='translateY(-2px)'" : ''}"
+          onmouseout="${hasQ ? "this.style.borderColor='" + (passed ? '#10b981' : '#1f2f3f') + "';this.style.transform='translateY(0)'" : ''}">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+            <h3 style="font-size:1rem;font-weight:800;color:#fff">${lec.name} 구두테스트</h3>
+            ${passed ? '<span style="background:rgba(16,185,129,0.15);color:#10b981;border:1px solid rgba(16,185,129,0.4);border-radius:999px;padding:0.2rem 0.6rem;font-size:0.7rem;font-weight:700">통과</span>' : ''}
+          </div>
+          ${!hasQ ? '<p style="color:#4b5563;font-size:0.78rem">준비 중</p>' : `
+            <p style="color:#6b7280;font-size:0.78rem">${lec.questions.length}개 문제</p>
+            ${latest ? `<p style="color:#f97316;font-size:0.85rem;font-weight:700;margin-top:0.4rem">${m.score}점 <span style="color:#6b7280;font-size:0.75rem">(정답 ${m.correct}/${m.answered} · 진행 ${m.progress}%)</span></p>` : ''}
+          `}
+        </div>`;
+    }).join('');
+
+    const recordsBtn = isAdmin && state.selectedStudent ? `
+      <button onclick="state.showRecords=true;loadStudentDataAndRender()" style="margin:0 1.5rem 1.5rem;padding:0.6rem 1.25rem;background:#1f2937;border:1px solid #374151;border-radius:0.75rem;color:#9ca3af;font-size:0.85rem;font-family:inherit;cursor:pointer;font-weight:700">
+        📊 학습 기록 보기
+      </button>` : '';
+
+    app.innerHTML = `
+      ${headerHTML(isAdmin ? state.adminName : state.studentName, state.userType)}
+      ${backBtn}
+      ${studentLabel}
+      ${recordsBtn}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;padding:1rem 1.5rem 3rem">
+        ${cards}
+      </div>`;
+  }
+
+  // ────────────────────────────────────────────────
+  // 필기(캔버스) 저장 / 복원 / 재생
+  // ────────────────────────────────────────────────
+  function strokesToCompact(strokes) {
+    return (strokes || [])
+      .filter(s => s.points && s.points.length >= 2)
+      .map(s => {
+        const p = [];
+        for (const pt of s.points) { p.push(Math.round(pt.x), Math.round(pt.y)); }
+        return { p, c: s.color, w: s.width };
+      });
+  }
+  function compactToStrokes(compact) {
+    if (!compact) return [];
+    return compact.map(s => {
+      const points = [];
+      for (let i = 0; i + 1 < s.p.length; i += 2) points.push({ x: s.p[i], y: s.p[i + 1] });
+      return { points, color: s.c || '#000000', width: s.w || 3 };
+    });
+  }
+  function captureCurrentStrokes() {
+    const idx = state.currentQuestion;
+    const compact = strokesToCompact(state.canvasStrokes);
+    if (compact.length === 0) { delete state.questionStrokes[idx]; return; }
+    const rect = state.currentCanvas ? state.currentCanvas.getBoundingClientRect() : null;
+    state.questionStrokes[idx] = { strokes: compact, w: rect ? Math.round(rect.width) : 0, h: 320 };
+  }
+  function loadStrokesFor(idx) {
+    const d = state.questionStrokes[idx];
+    return d ? compactToStrokes(d.strokes) : [];
+  }
+  function drawSavedStrokes(canvasEl, data) {
+    if (!canvasEl || !data || !data.strokes || !data.strokes.length) return;
+    const w0 = data.w || 300, h0 = data.h || 320;
+    const dispW = canvasEl.getBoundingClientRect().width || w0;
+    const dispH = dispW * (h0 / w0);
+    canvasEl.style.height = dispH + 'px';
+    const dpr = window.devicePixelRatio || 1;
+    canvasEl.width = dispW * dpr;
+    canvasEl.height = dispH * dpr;
+    const ctx = canvasEl.getContext('2d');
+    ctx.scale(dpr, dpr);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, dispW, dispH);
+    const s = dispW / w0;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const st of data.strokes) {
+      const p = st.p; if (!p || p.length < 4) continue;
+      ctx.strokeStyle = st.c || '#000000';
+      ctx.lineWidth = (st.w || 3) * s;
+      ctx.beginPath();
+      ctx.moveTo(p[0] * s, p[1] * s);
+      for (let i = 2; i + 1 < p.length; i += 2) ctx.lineTo(p[i] * s, p[i + 1] * s);
+      ctx.stroke();
+    }
+  }
+  function flushPendingDraws() {
+    setTimeout(() => {
+      (state._draw || []).forEach(d => {
+        const el = document.getElementById(d.id);
+        if (el) drawSavedStrokes(el, d.data);
+      });
+      state._draw = [];
+    }, 60);
+  }
+
+  function renderQuiz() {
+    const lec = state.selectedLecture;
+    const q = lec.questions[state.currentQuestion];
+    const total = lec.questions.length;
+    const idx = state.currentQuestion;
+    const answered = state.answers[idx];
+    const answeredCount = Object.keys(state.answers).length;
+    const locked = !!state.lockedAnswers[idx];
+    const isAdmin = state.userType === 'admin';
+
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      ${headerHTML(isAdmin ? state.adminName : state.studentName, state.userType)}
+      <div style="max-width:900px;margin:0 auto;padding:1.5rem">
+        <!-- 강의 목록으로 돌아가기 -->
+        <button onclick="exitQuiz()" style="margin-bottom:0.9rem;display:inline-flex;align-items:center;gap:0.4rem;background:none;border:none;color:#10b981;font-size:0.85rem;font-family:inherit;font-weight:700;cursor:pointer;padding:0">← 강의 목록으로</button>
+
+        <!-- 진행 상황 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <span style="background:#1f2937;border:1px solid #374151;border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#9ca3af;font-weight:700">
+            ${lec.name} — 문제 ${idx + 1} / ${total}
+          </span>
+          <div style="display:flex;align-items:center;gap:0.75rem">
+            <div style="background:#1e3a5f;border-radius:999px;padding:0.3rem 0.9rem;font-size:0.9rem;font-weight:800;color:#60a5fa" id="timerDisplay">
+              ⏱ ${formatTime(state.questionElapsed)}
+            </div>
+            <button onclick="toggleTimer()" id="timerBtn" style="padding:0.3rem 0.85rem;border-radius:999px;font-size:0.8rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:${state.timerRunning ? '#dc2626' : '#16a34a'};color:#fff">
+              ${state.timerRunning ? '■ 정지' : '▶ 시작'}
+            </button>
+          </div>
+        </div>
+
+        <!-- 문제 -->
+        <div style="background:#141428;border:1px solid #1f2f3f;border-radius:1.25rem;padding:1.75rem;margin-bottom:1.25rem">
+          <div style="font-size:1rem;line-height:1.8;color:#e5e7eb" id="questionText">${q.question}</div>
+        </div>
+
+        <!-- 필기 영역 -->
+        <div style="background:#141428;border:1px solid #1f2f3f;border-radius:1.25rem;padding:1.25rem;margin-bottom:1.25rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+            <span style="color:#6b7280;font-size:0.82rem;font-weight:700">✏ 필기 영역</span>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+              <button id="penBtn" onclick="setEraserMode(false)" style="padding:0.3rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:${!state.isEraserMode ? '#f97316' : '#374151'};color:#fff">✏ 펜</button>
+              <button id="eraserBtn" onclick="setEraserMode(true)" style="padding:0.3rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:${state.isEraserMode ? '#f97316' : '#374151'};color:#fff">✂ 지우개</button>
+              <button onclick="state.canvasStrokes=[];redrawCanvas()" style="padding:0.3rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:#374151;color:#fff">🗑 전체 지우기</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem">
+            <span style="color:#6b7280;font-size:0.75rem">색상:</span>
+            ${['#000000','#dc2626','#3b82f6','#16a34a','#f97316'].map(c =>
+              `<div onclick="state.penColor='${c}';document.getElementById('quizCanvas').style.cursor='crosshair'" style="width:20px;height:20px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${state.penColor===c?'#fff':'transparent'}"></div>`
+            ).join('')}
+            <span style="color:#6b7280;font-size:0.75rem;margin-left:0.5rem">굵기:</span>
+            ${[2,3,5,8].map(s =>
+              `<div onclick="state.penSize=${s}" style="width:${s*2.5}px;height:${s*2.5}px;min-width:8px;min-height:8px;border-radius:50%;background:#9ca3af;cursor:pointer;border:2px solid ${state.penSize===s?'#fff':'transparent'}"></div>`
+            ).join('')}
+          </div>
+          <canvas id="quizCanvas" style="width:100%;height:320px;border-radius:0.75rem;display:block;cursor:crosshair"></canvas>
+        </div>
+
+        <!-- OX 버튼 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.5rem">
+          <button ${locked?'':`onclick="handleAnswer('O')"`} style="padding:1.25rem;border-radius:1rem;font-size:1.5rem;font-weight:900;font-family:inherit;border:2px solid ${answered==='O'?'#10b981':'#374151'};background:${answered==='O'?'rgba(16,185,129,0.15)':'#141428'};color:${answered==='O'?'#10b981':'#9ca3af'};cursor:${locked?'default':'pointer'};opacity:${locked&&answered!=='O'?'0.35':'1'};transition:all 0.15s">O</button>
+          <button ${locked?'':`onclick="handleAnswer('X')"`} style="padding:1.25rem;border-radius:1rem;font-size:1.5rem;font-weight:900;font-family:inherit;border:2px solid ${answered==='X'?'#ef4444':'#374151'};background:${answered==='X'?'rgba(239,68,68,0.15)':'#141428'};color:${answered==='X'?'#ef4444':'#9ca3af'};cursor:${locked?'default':'pointer'};opacity:${locked&&answered!=='X'?'0.35':'1'};transition:all 0.15s">X</button>
+        </div>
+        <div style="text-align:center;font-size:0.75rem;margin-bottom:1.25rem;color:${locked?'#f59e0b':'#4b5563'}">${locked?'🔒 이미 제출·채점된 문제입니다 (수정 불가)':'답을 선택하면 저장됩니다'}</div>
+
+        <!-- 이전/다음 -->
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+          <button onclick="handlePrev()" ${idx===0?'disabled':''} style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:${idx===0?'#4b5563':'#fff'};cursor:${idx===0?'not-allowed':'pointer'}">← 이전</button>
+          <button onclick="handleNext()" ${idx===total-1?'disabled':''} style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:${idx===total-1?'#4b5563':'#fff'};cursor:${idx===total-1?'not-allowed':'pointer'}">다음 →</button>
+        </div>
+
+        <!-- 제출하기 (항상 노출) -->
+        <button onclick="finishQuiz()" ${answeredCount>=1?'':'disabled'} style="width:100%;padding:0.95rem;border-radius:0.875rem;font-size:0.95rem;font-weight:800;font-family:inherit;border:none;background:${answeredCount>=1?'linear-gradient(135deg,#f97316,#fb923c)':'#374151'};color:#fff;cursor:${answeredCount>=1?'pointer':'not-allowed'}">제출하기 (${answeredCount}/${total} 답변)</button>
+        <p style="text-align:center;color:#4b5563;font-size:0.75rem;margin-top:0.6rem">지금까지 답변·필기한 내용으로 제출됩니다 · 최소 1문제 이상 답변 필요</p>
+      </div>`;
+
+    renderMath();
+    setTimeout(() => initCanvas('quizCanvas'), 50);
+  }
+
+  function renderQuizResult() {
+    const lec = state.selectedLecture;
+    const totalQ = lec.questions.length;
+    const answered = Object.keys(state.answers).length;
+    const correct = lec.questions.filter((q, i) => state.answers[i] === q.answer).length;
+    const score = answered > 0 ? Math.round(correct / answered * 100) : 0;   // 구두테스트 점수(맞은 수/푼 수)
+    const progress = totalQ > 0 ? Math.round(answered / totalQ * 100) : 0;   // 진행률(푼 수/전체)
+    const passed = score >= 80;
+    const isAdmin = state.userType === 'admin';
+
+    const app = document.getElementById('app');
+    state._draw = [];
+    app.innerHTML = `
+      ${headerHTML(isAdmin ? state.adminName : state.studentName, state.userType)}
+      <div style="max-width:700px;margin:2rem auto;padding:1.5rem">
+        <div style="background:#141428;border:1px solid ${passed?'#10b981':'#374151'};border-radius:1.5rem;padding:2rem;text-align:center;margin-bottom:1.5rem">
+          <div style="color:#6b7280;font-size:0.8rem;font-weight:700;margin-bottom:0.35rem">구두테스트 점수</div>
+          <div style="font-size:3rem;font-weight:900;color:${passed?'#10b981':'#f97316'};line-height:1">${score}점</div>
+          <div style="color:#9ca3af;font-size:0.9rem;margin-top:0.5rem">정답 ${correct} / ${answered} <span style="color:#6b7280;font-size:0.78rem">(푼 문제 기준)</span></div>
+          <div style="color:${passed?'#10b981':'#f97316'};font-size:0.85rem;font-weight:700;margin-top:0.5rem">${lec.name} 구두테스트 ${passed?'통과 🎉':'미통과'}</div>
+          <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid #1f2f3f;color:#9ca3af;font-size:0.85rem">진행률 <span style="color:#60a5fa;font-weight:800">${progress}%</span> <span style="color:#6b7280;font-size:0.78rem">(${answered} / ${totalQ} 문제)</span></div>
+        </div>
+
+        <!-- 액션 버튼 (상단) -->
+        <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem">
+          <button onclick="backToLectureList()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:#fff;cursor:pointer">← 강의 목록</button>
+          ${answered >= totalQ
+            ? `<button disabled style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:1px solid #374151;background:#141428;color:#6b7280;cursor:not-allowed">모두 완료 ✓</button>`
+            : `<button onclick="resumeLecture()" style="flex:1;padding:0.9rem;border-radius:0.875rem;font-size:0.9rem;font-weight:700;font-family:inherit;border:none;background:linear-gradient(135deg,#10b981,#059669);color:#fff;cursor:pointer">이어서 풀기 (남은 ${totalQ - answered}문제)</button>`
+          }
+        </div>
+
+        <!-- 문제별 결과 -->
+        <div style="display:flex;flex-direction:column;gap:0.75rem;margin-bottom:1.5rem">
+          ${lec.questions.map((q, i) => {
+            const ans = state.answers[i];
+            const answeredThis = ans !== undefined;
+            const isCorrect = ans === q.answer;
+            const sData = state.questionStrokes[i];
+            const cid = 'res_' + i;
+            if (sData) state._draw.push({ id: cid, data: sData });
+            const bd = !answeredThis ? 'rgba(107,114,128,0.3)' : (isCorrect ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)');
+            return `
+              <div style="background:#141428;border:1px solid ${bd};border-radius:0.875rem;padding:1rem">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
+                  <span style="color:#9ca3af;font-size:0.8rem">문제 ${i+1}</span>
+                  <span style="color:${!answeredThis?'#6b7280':(isCorrect?'#10b981':'#ef4444')};font-weight:700;font-size:0.85rem">${!answeredThis?'— 미응답':(isCorrect?'✓ 정답':'✗ 오답')}</span>
+                </div>
+                <div style="font-size:0.85rem;color:#e5e7eb;margin-bottom:0.4rem" class="math-text">${q.question}</div>
+                ${q.hint ? `<div style="color:#6b7280;font-size:0.78rem;margin-top:0.3rem">💡 ${q.hint}</div>` : ''}
+                ${sData ? `<div style="color:#6b7280;font-size:0.72rem;margin:0.5rem 0 0.25rem">✏ 필기</div><canvas id="${cid}" style="width:100%;display:block;border-radius:0.5rem;background:#fff"></canvas>` : ''}
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
+    renderMath();
+    flushPendingDraws();
+  }
+
+  function renderRecords() {
+    const isAdmin = state.userType === 'admin';
+    const isStudent = state.userType === 'student';
+    const docId = isAdmin && state.selectedStudent
+      ? state.selectedStudent.id
+      : `${state.studentName}_${state.phone}`;
+    const attempts = state.allStudentData[docId]?.attempts || [];
+    const sorted = [...attempts].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const app = document.getElementById('app');
+    state._draw = [];
+
+    app.innerHTML = `
+      ${headerHTML(isAdmin ? state.adminName : state.studentName, state.userType)}
+      <div style="max-width:900px;margin:0 auto;padding:1.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+          <h2 style="font-size:1.1rem;font-weight:800;color:#fff">
+            ${isAdmin && state.selectedStudent ? state.selectedStudent.studentName + ' 학생의 ' : ''}학습 기록
+          </h2>
+          <div style="display:flex;gap:0.5rem">
+            <button onclick="loadStudentDataAndRender()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">🔄 새로고침</button>
+            <button onclick="goBackToHome()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">← 과목 선택</button>
+            ${isStudent ? '' : `<button onclick="state.showRecords=false;render()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">강의 목록</button>`}
+          </div>
+        </div>
+        ${sorted.length === 0 ? `
+          <div style="background:#141428;border:1px solid #1f1f35;border-radius:1rem;padding:3rem;text-align:center">
+            <p style="color:#6b7280">아직 학습 기록이 없습니다.</p>
+            ${isStudent ? `<p style="color:#4b5563;font-size:0.82rem;margin-top:0.5rem">선생님이 구두테스트를 진행하면 이곳에 기록이 표시됩니다.</p>` : ''}
+          </div>` : sorted.map(a => {
+          const lec = lectures.find(l => l.id === a.lectureId);
+          const m = attemptMetrics(a);
+          const date = new Date(a.date).toLocaleDateString('ko-KR');
+          const time = new Date(a.date).toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
+          const expanded = !!state.expandedAttempts[a.date];
+          const qStrokes = a.questionStrokes || {};
+          const answerKeys = Object.keys(a.answers || {}).map(Number);
+          const strokeKeys = Object.keys(qStrokes).map(Number);
+          const qCount = lec ? lec.questions.length : (Math.max(-1, ...answerKeys, ...strokeKeys) + 1);
+          const hasStrokes = strokeKeys.length > 0;
+          let detail = '';
+          if (expanded) {
+            const rows = [];
+            for (let i = 0; i < qCount; i++) {
+              const ans = a.answers ? a.answers[i] : undefined;
+              const data = qStrokes[i];
+              if (ans === undefined && !data) continue;
+              const q = lec && lec.questions[i];
+              const correctAns = q ? q.answer : null;
+              const isCorrect = correctAns != null && ans === correctAns;
+              const cid = ('rc_' + a.date + '_' + i).replace(/[^a-zA-Z0-9_]/g, '');
+              if (data) state._draw.push({ id: cid, data });
+              rows.push(`
+                <div style="background:#0f0f1a;border:1px solid #1f2f3f;border-radius:0.75rem;padding:0.75rem">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
+                    <span style="color:#9ca3af;font-size:0.8rem;font-weight:700">문제 ${i+1}</span>
+                    <span style="font-size:0.78rem;font-weight:700;color:${ans===undefined?'#6b7280':(isCorrect?'#10b981':'#ef4444')}">${ans===undefined?'미답변':('채점 '+ans+(correctAns!=null?(isCorrect?' ✓':' ✗'):''))}</span>
+                  </div>
+                  ${data ? `<canvas id="${cid}" style="width:100%;display:block;border-radius:0.5rem;background:#fff"></canvas>` : `<div style="color:#4b5563;font-size:0.75rem">✏ 필기 없음</div>`}
+                </div>`);
+            }
+            detail = `<div style="margin-top:0.9rem;border-top:1px solid #1f2f3f;padding-top:0.9rem;display:flex;flex-direction:column;gap:0.6rem">${rows.join('') || '<div style="color:#4b5563;font-size:0.8rem">저장된 상세 내역이 없습니다.</div>'}</div>`;
+          }
+          return `
+            <div style="background:#141428;border:1px solid #1f2f3f;border-radius:1rem;padding:1.25rem;margin-bottom:0.75rem">
+              <div onclick="toggleAttempt('${a.date}')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+                <div>
+                  <div style="font-weight:700;color:#fff;margin-bottom:0.25rem">${lec?.name || '알 수 없음'} 구두테스트 <span style="color:#6b7280;font-size:0.75rem;font-weight:500;margin-left:0.25rem">${expanded?'▲ 접기':(hasStrokes?'▼ 필기 보기':'▼ 상세')}</span></div>
+                  <div style="color:#6b7280;font-size:0.78rem">${date} ${time}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:1.3rem;font-weight:900;color:${m.score>=80?'#10b981':'#f97316'}">${m.score}점</div>
+                  <div style="color:#6b7280;font-size:0.75rem">정답 ${m.correct}/${m.answered} · 진행 ${m.progress}%</div>
+                </div>
+              </div>
+              ${detail}
+            </div>`;
+        }).join('')}
+      </div>`;
+
+    flushPendingDraws();
+  }
+
+  function renderMath() {
+    document.querySelectorAll('.math-text, #questionText').forEach(el => {
+      try {
+        renderMathInElement(el, {
+          delimiters: [
+            {left:'\\(', right:'\\)', display:false},
+            {left:'\\[', right:'\\]', display:true},
+            {left:'$', right:'$', display:false}
+          ],
+          throwOnError: false
+        });
+      } catch(e) {}
+    });
+  }
+
+  // ────────────────────────────────────────────────
+  // 이벤트 핸들러
+  // ────────────────────────────────────────────────
+  function startLecture(id) {
+    if (state.userType === 'student') return; // 학생은 스스로 테스트를 시작할 수 없음 (선생님이 진행)
+    const lec = lectures.find(l => l.id === id);
+    if (!lec || lec.questions.length === 0) return;
+    state.selectedLecture = lec;
+    // 이전에 제출한 진행(가장 최근 기록)을 불러와 이어서 풀기
+    const prev = getLatestAttempt(id);
+    state.answers = (prev && prev.answers) ? Object.assign({}, prev.answers) : {};
+    state.questionStrokes = (prev && prev.questionStrokes) ? Object.assign({}, prev.questionStrokes) : {};
+    state.questionTimes = (prev && prev.questionTimes) ? Object.assign({}, prev.questionTimes) : {};
+    state.lockedAnswers = {};
+    Object.keys(state.answers).forEach(k => { state.lockedAnswers[k] = true; }); // 이미 푼 문제는 잠금
+    state.quizCompleted = false;
+    state.currentQuestion = firstUnansweredIndex(lec);
+    state.canvasStrokes = loadStrokesFor(state.currentQuestion);
+    resetTimer();
+    render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function handleAnswer(ans) {
+    if (state.lockedAnswers[state.currentQuestion]) return; // 이미 채점된 문제는 수정 불가
+    state.answers[state.currentQuestion] = ans;
+    render();
+  }
+
+  function toggleAttempt(dateKey) {
+    state.expandedAttempts[dateKey] = !state.expandedAttempts[dateKey];
+    render();
+  }
+
+  function getLatestAttempt(lectureId) {
+    const arr = getAttemptsForLecture(lectureId);
+    return arr.length ? arr[arr.length - 1] : null;
+  }
+
+  function firstUnansweredIndex(lec) {
+    for (let i = 0; i < lec.questions.length; i++) {
+      if (state.answers[i] === undefined) return i;
+    }
+    return 0; // 전부 답변됨
+  }
+
+  function handleNext() {
+    const lec = state.selectedLecture;
+    if (state.currentQuestion < lec.questions.length - 1) {
+      saveQuestionTime(state.currentQuestion);
+      captureCurrentStrokes();
+      state.currentQuestion++;
+      state.canvasStrokes = loadStrokesFor(state.currentQuestion);
+      resetTimer();
+      render();
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }
+
+  function handlePrev() {
+    if (state.currentQuestion > 0) {
+      saveQuestionTime(state.currentQuestion);
+      captureCurrentStrokes();
+      state.currentQuestion--;
+      state.canvasStrokes = loadStrokesFor(state.currentQuestion);
+      resetTimer();
+      render();
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }
+
+  async function finishQuiz() {
+    const lec = state.selectedLecture;
+    const total = lec.questions.length;
+    const answeredCount = Object.keys(state.answers).length;
+    if (answeredCount === 0) return;
+
+    saveQuestionTime(state.currentQuestion);
+    captureCurrentStrokes();
+    stopTimer();
+
+    const correct = lec.questions.filter((q, i) => state.answers[i] === q.answer).length;
+    const score = answeredCount > 0 ? Math.round(correct / answeredCount * 100) : 0;   // 구두테스트 점수(맞은 수/푼 수)
+    const progress = total > 0 ? Math.round(answeredCount / total * 100) : 0;           // 진행률(푼 수/전체)
+    const attempt = {
+      lectureId: lec.id,
+      lectureName: lec.name,
+      date: new Date().toISOString(),
+      correct,
+      answered: answeredCount,
+      totalQuestions: total,
+      score,
+      progress,
+      oralTestPassed: score >= 80,
+      answers: state.answers,
+      questionTimes: state.questionTimes,
+      questionStrokes: state.questionStrokes,
+      // 구버전 호환 필드
+      total: answeredCount,
+      percentage: score,
+    };
+
+    await saveAttempt(attempt);
+    // 제출한 답변은 모두 잠금(재풀이 불가) → 이어서 풀기 시 미답변만 풀 수 있음
+    Object.keys(state.answers).forEach(k => { state.lockedAnswers[k] = true; });
+    state.quizCompleted = true;
+    render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function backToLectureList() {
+    state.selectedLecture = null;
+    state.quizCompleted = false;
+    state.answers = {};
+    state.lockedAnswers = {};
+    state.canvasStrokes = [];
+    state.questionStrokes = {};
+    state.questionTimes = {};
+    state.currentQuestion = 0;
+    resetTimer();
+    render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function exitQuiz() {
+    const hasNew = Object.keys(state.answers).some(k => !state.lockedAnswers[k])
+      || (state.canvasStrokes && state.canvasStrokes.length > 0);
+    if (hasNew && !confirm('제출하지 않은 이번 답변·필기는 저장되지 않습니다.\n강의 목록으로 돌아갈까요?')) return;
+    backToLectureList();
+  }
+
+  // 이어서 풀기: 이전 답변·필기를 유지한 채, 아직 안 푼 문제만 풀도록 재개
+  function resumeLecture() {
+    const lec = state.selectedLecture;
+    state.quizCompleted = false;
+    state.currentQuestion = firstUnansweredIndex(lec);
+    state.canvasStrokes = loadStrokesFor(state.currentQuestion);
+    resetTimer();
+    render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  function toggleTimer() {
+    if (state.timerRunning) { stopTimer(); } else { startTimer(); }
+    const btn = document.getElementById('timerBtn');
+    if (btn) {
+      btn.textContent = state.timerRunning ? '■ 정지' : '▶ 시작';
+      btn.style.background = state.timerRunning ? '#dc2626' : '#16a34a';
+    }
+  }
+
+  function setEraserMode(on) {
+    state.isEraserMode = on;
+    const penBtn = document.getElementById('penBtn');
+    const eraserBtn = document.getElementById('eraserBtn');
+    if (penBtn) penBtn.style.background = on ? '#374151' : '#f97316';
+    if (eraserBtn) eraserBtn.style.background = on ? '#f97316' : '#374151';
+  }
+
+  function goBackToHome() {
+    if (state.selectedStudent) {
+      sessionStorage.setItem('ox_return_student_id', state.selectedStudent.id);
+      sessionStorage.setItem('ox_return_student_name', state.selectedStudent.studentName || '');
+    }
+    window.location.href = '/';
+  }
+
+  function doLogout() {
+    stopTimer();
+    localStorage.removeItem('ox_quiz_student_name');
+    localStorage.removeItem('ox_quiz_student_phone');
+    localStorage.removeItem('ox_quiz_auto_login');
+    localStorage.removeItem('ox_quiz_admin_name');
+    localStorage.removeItem('ox_quiz_admin_auto_login');
+    localStorage.removeItem('ox_quiz_preselect_student');
+    localStorage.removeItem('mathstart_user');
+    window.location.href = '/';
+  }
+
+  async function loadStudentDataAndRender() {
+    const docId = state.selectedStudent
+      ? state.selectedStudent.id
+      : `${state.studentName}_${state.phone}`;
+    await loadStudentData(docId);
+    render();
+  }
+
+  async function applyPreselectStudent() {
+    const preselectId = localStorage.getItem('ox_quiz_preselect_student');
+    if (!preselectId) return;
+    localStorage.removeItem('ox_quiz_preselect_student');
+    try {
+      const doc = await db.collection('oral-test-students').doc(preselectId).get();
+      if (doc.exists) {
+        state.selectedStudent = { id: doc.id, ...doc.data() };
+        await loadStudentData(preselectId);
+      }
+    } catch(e) { console.warn('preselect 로드 실패:', e); }
+  }
+
+  // ────────────────────────────────────────────────
+  // 초기화 (자동 로그인)
+  // ────────────────────────────────────────────────
+  async function init() {
+    const adminAuto = localStorage.getItem('ox_quiz_admin_auto_login');
+    const studentAuto = localStorage.getItem('ox_quiz_auto_login');
+
+    if (adminAuto === 'true') {
+      const name = localStorage.getItem('ox_quiz_admin_name') || '';
+      state.userType = 'admin';
+      state.adminName = name;
+      await applyPreselectStudent();
+      render();
+    } else if (studentAuto === 'true') {
+      const name = localStorage.getItem('ox_quiz_student_name') || '';
+      const phone = localStorage.getItem('ox_quiz_student_phone') || '';
+      state.userType = 'student';
+      state.studentName = name;
+      state.phone = phone;
+      await loadStudentData(`${name}_${phone}`);
+      render();
+    } else {
+      redirectToHome();
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
