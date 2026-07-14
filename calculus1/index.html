@@ -502,8 +502,7 @@
       </button>`;
 
     const cards = lectures.map(lec => {
-      const attempts = getAttemptsForLecture(lec.id);
-      const latest = attempts.length ? attempts[attempts.length - 1] : null;
+      const latest = getLatestAttempt(lec.id); // 정규 시도만 (재시험 제외)
       const hasQ = lec.questions.length > 0;
       const m = latest ? attemptMetrics(latest) : null;
       const passed = latest && latest.oralTestPassed;
@@ -746,6 +745,45 @@
     flushPendingDraws();
   }
 
+  // 시도 하나의 총 소요시간 문자열
+  function attemptTimeStr(a) {
+    const t = Object.values(a.questionTimes || {}).reduce((s, v) => s + (+v || 0), 0);
+    const mn = Math.floor(t / 60), sc = t % 60;
+    return mn > 0 ? (mn + '분') : (sc + '초');
+  }
+
+  // 시도 하나의 문제별 상세(필기 포함) HTML — 재시험이면 원본 문제 번호로 표시
+  function attemptDetailRows(a, lec, prefix) {
+    const idxs = a.questionIndices || null;
+    const answerKeys = Object.keys(a.answers || {}).map(Number);
+    const strokeKeys = Object.keys(a.questionStrokes || {}).map(Number);
+    const n = idxs ? idxs.length : (lec ? lec.questions.length : (Math.max(-1, ...answerKeys, ...strokeKeys) + 1));
+    const rows = [];
+    for (let i = 0; i < n; i++) {
+      const ans = a.answers ? a.answers[i] : undefined;
+      const data = (a.questionStrokes || {})[i];
+      if (ans === undefined && !data) continue;
+      const origIdx = idxs ? idxs[i] : i;
+      const q = lec ? lec.questions[origIdx] : null;
+      const correctAns = q ? q.answer : null;
+      const isCorrect = correctAns != null && ans === correctAns;
+      const cid = (prefix + '_' + i).replace(/[^a-zA-Z0-9_]/g, '');
+      if (data) state._draw.push({ id: cid, data });
+      const col = ans === undefined ? '#6b7280' : (isCorrect ? '#10b981' : '#ef4444');
+      const bd = ans === undefined ? 'rgba(107,114,128,0.3)' : (isCorrect ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)');
+      rows.push(`
+        <div style="background:#0f0f1a;border:1px solid ${bd};border-radius:0.75rem;padding:0.75rem">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
+            <span style="color:${col};font-size:0.8rem;font-weight:700">문제 ${origIdx + 1}</span>
+            <span style="font-size:0.75rem;font-weight:700;color:${col}">${ans === undefined ? '미응답' : (isCorrect ? '✓ 정답' : '✗ 오답')}</span>
+          </div>
+          ${q ? `<div style="color:#cbd5e1;font-size:0.8rem;line-height:1.6;margin-bottom:0.4rem" class="math-text">${q.question}</div>` : ''}
+          ${data ? `<div style="color:#6b7280;font-size:0.72rem;margin-bottom:0.25rem">✏ 필기</div><canvas id="${cid}" style="width:100%;display:block;border-radius:0.5rem;background:#fff"></canvas>` : `<div style="color:#4b5563;font-size:0.72rem">✏ 필기 없음</div>`}
+        </div>`);
+    }
+    return rows.join('') || '<div style="color:#4b5563;font-size:0.8rem">저장된 상세 내역이 없습니다.</div>';
+  }
+
   function renderRecords() {
     const isAdmin = state.userType === 'admin';
     const isStudent = state.userType === 'student';
@@ -753,14 +791,116 @@
       ? state.selectedStudent.id
       : `${state.studentName}_${state.phone}`;
     const attempts = state.allStudentData[docId]?.attempts || [];
-    const sorted = [...attempts].sort((a, b) => new Date(b.date) - new Date(a.date));
     const app = document.getElementById('app');
     state._draw = [];
 
+    const regulars = attempts.filter(a => !a.isWrongAnswerTest)
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    const retests = attempts.filter(a => a.isWrongAnswerTest && a.wrongAnswerAttemptId);
+
+    // 날짜별 그룹화 (최신 날짜 먼저)
+    const groups = {};
+    regulars.forEach(a => {
+      const key = new Date(a.date).toLocaleDateString('ko-KR');
+      (groups[key] = groups[key] || []).push(a);
+    });
+    const dateKeys = Object.keys(groups).sort((x, y) => new Date(groups[y][0].date) - new Date(groups[x][0].date));
+
+    // 정규 시도 1개 카드(왼쪽)
+    function regularCard(a, lec, pct) {
+      const expanded = !!state.expandedAttempts[a.date];
+      const time = new Date(a.date).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const answered = a.answered != null ? a.answered : (a.total || 0);
+      const wrong = Math.max(0, answered - (a.correct || 0));
+      const passed = pct >= 80;
+      return `
+        <div style="background:#141428;border:1px solid #1f2f3f;border-radius:1rem;overflow:hidden">
+          <div onclick="toggleAttempt('${a.date}')" style="padding:1rem 1.1rem;cursor:pointer">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:0.5rem;margin-bottom:0.75rem">
+              <div>
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.25rem">
+                  <span style="font-size:1rem;font-weight:800;color:#fff">${lec?.name || a.lectureName || '구두테스트'}</span>
+                  <span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:999px;background:${passed ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'};color:${passed ? '#34d399' : '#f87171'}">구두테스트 ${passed ? '통과' : '불통과'}</span>
+                </div>
+                <div style="color:#6b7280;font-size:0.75rem">${time}</div>
+              </div>
+              <div style="font-size:1.6rem;font-weight:900;color:${pct === 100 ? '#22c55e' : passed ? '#10b981' : '#f87171'}">${pct}%</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;padding-top:0.75rem;border-top:1px solid #1f2f3f">
+              <div style="text-align:center"><div style="font-size:1rem;font-weight:800;color:#34d399">${a.correct || 0}</div><div style="color:#6b7280;font-size:0.7rem">맞힘</div></div>
+              <div style="text-align:center"><div style="font-size:1rem;font-weight:800;color:#f87171">${wrong}</div><div style="color:#6b7280;font-size:0.7rem">틀림</div></div>
+              <div style="text-align:center"><div style="font-size:1rem;font-weight:800;color:#60a5fa">${attemptTimeStr(a)}</div><div style="color:#6b7280;font-size:0.7rem">총 시간</div></div>
+              <div style="text-align:center;color:#6b7280;font-size:1rem;font-weight:800">${expanded ? '▲' : '▼'}</div>
+            </div>
+          </div>
+          ${expanded ? `<div style="border-top:1px solid #1f2f3f;padding:0.9rem;background:rgba(15,15,26,0.4);display:flex;flex-direction:column;gap:0.6rem">${attemptDetailRows(a, lec, 'rc_' + a.date)}</div>` : ''}
+        </div>`;
+    }
+
+    // 재시험 1회분 카드(오른쪽 패널 내부)
+    function retestBlock(r, lec) {
+      const expanded = !!state.expandedAttempts['rt_' + r.date];
+      const pct = r.percentage != null ? r.percentage : attemptMetrics(r).score;
+      const answered = r.answered != null ? r.answered : (r.total || 0);
+      const wrong = Math.max(0, answered - (r.correct || 0));
+      const passed = pct === 100;
+      const time = new Date(r.date).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      return `
+        <div style="background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.3);border-radius:0.85rem;overflow:hidden">
+          <div onclick="toggleAttempt('rt_${r.date}')" style="padding:0.85rem;cursor:pointer">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.6rem">
+              <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap">
+                <span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:999px;background:rgba(168,85,247,0.25);color:#c084fc">재시험 ${r.retestRound || 1}회차</span>
+                <span style="font-size:0.72rem;font-weight:700;padding:0.15rem 0.55rem;border-radius:999px;background:${passed ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'};color:${passed ? '#34d399' : '#f87171'}">${passed ? '통과' : '불통과'}</span>
+                <span style="color:#6b7280;font-size:0.72rem">${time}</span>
+              </div>
+              <div style="font-size:1.1rem;font-weight:900;color:${passed ? '#22c55e' : '#f87171'}">${pct}%</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.4rem">
+              <div style="text-align:center;background:rgba(16,185,129,0.1);border-radius:0.5rem;padding:0.35rem"><div style="font-size:0.95rem;font-weight:800;color:#34d399">${r.correct || 0}</div><div style="color:#6b7280;font-size:0.68rem">맞힘</div></div>
+              <div style="text-align:center;background:rgba(239,68,68,0.1);border-radius:0.5rem;padding:0.35rem"><div style="font-size:0.95rem;font-weight:800;color:#f87171">${wrong}</div><div style="color:#6b7280;font-size:0.68rem">틀림</div></div>
+              <div style="text-align:center;background:rgba(96,165,250,0.1);border-radius:0.5rem;padding:0.35rem"><div style="font-size:0.95rem;font-weight:800;color:#60a5fa">${attemptTimeStr(r)}</div><div style="color:#6b7280;font-size:0.68rem">총 시간</div></div>
+            </div>
+          </div>
+          ${expanded ? `<div style="border-top:1px solid rgba(168,85,247,0.2);padding:0.75rem;display:flex;flex-direction:column;gap:0.6rem">${attemptDetailRows(r, lec, 'rt_' + r.date)}</div>` : ''}
+        </div>`;
+    }
+
+    // 오른쪽 재시험 패널
+    function retestPanel(a, lec, pct) {
+      const rts = retests.filter(r => r.wrongAnswerAttemptId === a.date)
+        .sort((x, y) => (x.retestRound || 1) - (y.retestRound || 1));
+      const round1 = rts.find(r => (r.retestRound || 1) === 1);
+      const round2 = rts.find(r => r.retestRound === 2);
+      const answered = a.answered != null ? a.answered : (a.total || 0);
+      const hasWrong = (answered - (a.correct || 0)) > 0;
+      // 선생님용 재시험 시작 버튼
+      let startBtns = '';
+      if (isAdmin && hasWrong) {
+        if (!round1) {
+          startBtns += `<button onclick="startRetest('${a.date}',1)" style="width:100%;padding:0.7rem;border-radius:0.7rem;border:none;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:inherit;font-weight:800;font-size:0.85rem;cursor:pointer">📝 재시험 1회차 시작</button>`;
+        } else if (round1 && (round1.percentage != null ? round1.percentage : 0) < 100 && !round2) {
+          startBtns += `<button onclick="startRetest('${a.date}',2)" style="width:100%;padding:0.7rem;border-radius:0.7rem;border:none;background:linear-gradient(135deg,#a855f7,#7c3aed);color:#fff;font-family:inherit;font-weight:800;font-size:0.85rem;cursor:pointer">📝 재시험 2회차 시작</button>`;
+        }
+      }
+      if (rts.length === 0) {
+        return `
+          <div style="border:1px dashed #374151;border-radius:1rem;padding:1.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0.9rem;min-height:120px">
+            <p style="color:#6b7280;font-size:0.85rem">재시험 미진행</p>
+            ${startBtns}
+          </div>`;
+      }
+      return `
+        <div style="display:flex;flex-direction:column;gap:0.6rem">
+          ${rts.map(r => retestBlock(r, lec)).join('')}
+          ${startBtns}
+        </div>`;
+    }
+
     app.innerHTML = `
       ${headerHTML(isAdmin ? state.adminName : state.studentName, state.userType)}
-      <div style="max-width:900px;margin:0 auto;padding:1.5rem">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+      <div style="max-width:1000px;margin:0 auto;padding:1.5rem">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:0.5rem;flex-wrap:wrap">
           <h2 style="font-size:1.1rem;font-weight:800;color:#fff">
             ${isAdmin && state.selectedStudent ? state.selectedStudent.studentName + ' 학생의 ' : ''}학습 기록
           </h2>
@@ -770,61 +910,28 @@
             ${isStudent ? '' : `<button onclick="state.showRecords=false;render()" style="padding:0.4rem 0.85rem;background:#1f2937;border:1px solid #374151;border-radius:0.5rem;color:#9ca3af;font-size:0.8rem;font-family:inherit;cursor:pointer;font-weight:700">강의 목록</button>`}
           </div>
         </div>
-        ${sorted.length === 0 ? `
+        ${regulars.length === 0 ? `
           <div style="background:#141428;border:1px solid #1f1f35;border-radius:1rem;padding:3rem;text-align:center">
             <p style="color:#6b7280">아직 학습 기록이 없습니다.</p>
             ${isStudent ? `<p style="color:#4b5563;font-size:0.82rem;margin-top:0.5rem">선생님이 구두테스트를 진행하면 이곳에 기록이 표시됩니다.</p>` : ''}
-          </div>` : sorted.map(a => {
-          const lec = lectures.find(l => l.id === a.lectureId);
-          const m = attemptMetrics(a);
-          const date = new Date(a.date).toLocaleDateString('ko-KR');
-          const time = new Date(a.date).toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'});
-          const expanded = !!state.expandedAttempts[a.date];
-          const qStrokes = a.questionStrokes || {};
-          const answerKeys = Object.keys(a.answers || {}).map(Number);
-          const strokeKeys = Object.keys(qStrokes).map(Number);
-          const qCount = lec ? lec.questions.length : (Math.max(-1, ...answerKeys, ...strokeKeys) + 1);
-          const hasStrokes = strokeKeys.length > 0;
-          let detail = '';
-          if (expanded) {
-            const rows = [];
-            for (let i = 0; i < qCount; i++) {
-              const ans = a.answers ? a.answers[i] : undefined;
-              const data = qStrokes[i];
-              if (ans === undefined && !data) continue;
-              const q = lec && lec.questions[i];
-              const correctAns = q ? q.answer : null;
-              const isCorrect = correctAns != null && ans === correctAns;
-              const cid = ('rc_' + a.date + '_' + i).replace(/[^a-zA-Z0-9_]/g, '');
-              if (data) state._draw.push({ id: cid, data });
-              rows.push(`
-                <div style="background:#0f0f1a;border:1px solid #1f2f3f;border-radius:0.75rem;padding:0.75rem">
-                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.4rem">
-                    <span style="color:#9ca3af;font-size:0.8rem;font-weight:700">문제 ${i+1}</span>
-                    <span style="font-size:0.78rem;font-weight:700;color:${ans===undefined?'#6b7280':(isCorrect?'#10b981':'#ef4444')}">${ans===undefined?'미답변':('채점 '+ans+(correctAns!=null?(isCorrect?' ✓':' ✗'):''))}</span>
-                  </div>
-                  ${data ? `<canvas id="${cid}" style="width:100%;display:block;border-radius:0.5rem;background:#fff"></canvas>` : `<div style="color:#4b5563;font-size:0.75rem">✏ 필기 없음</div>`}
-                </div>`);
-            }
-            detail = `<div style="margin-top:0.9rem;border-top:1px solid #1f2f3f;padding-top:0.9rem;display:flex;flex-direction:column;gap:0.6rem">${rows.join('') || '<div style="color:#4b5563;font-size:0.8rem">저장된 상세 내역이 없습니다.</div>'}</div>`;
-          }
-          return `
-            <div style="background:#141428;border:1px solid #1f2f3f;border-radius:1rem;padding:1.25rem;margin-bottom:0.75rem">
-              <div onclick="toggleAttempt('${a.date}')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
-                <div>
-                  <div style="font-weight:700;color:#fff;margin-bottom:0.25rem">${lec?.name || '알 수 없음'} 구두테스트 <span style="color:#6b7280;font-size:0.75rem;font-weight:500;margin-left:0.25rem">${expanded?'▲ 접기':(hasStrokes?'▼ 필기 보기':'▼ 상세')}</span></div>
-                  <div style="color:#6b7280;font-size:0.78rem">${date} ${time}</div>
-                </div>
-                <div style="text-align:right">
-                  <div style="font-size:1.3rem;font-weight:900;color:${m.score>=80?'#10b981':'#f97316'}">${m.score}점</div>
-                  <div style="color:#6b7280;font-size:0.75rem">정답 ${m.correct}/${m.answered} · 진행 ${m.progress}%</div>
-                </div>
+          </div>` : dateKeys.map(dk => `
+            <div style="margin-bottom:2rem">
+              <h3 style="font-size:1.05rem;font-weight:800;color:#fff;border-bottom:1px solid #374151;padding-bottom:0.5rem;margin-bottom:1rem">${dk}</h3>
+              <div style="display:flex;flex-direction:column;gap:1rem">
+                ${groups[dk].map(a => {
+                  const lec = lectures.find(l => l.id === a.lectureId);
+                  const pct = a.percentage != null ? a.percentage : attemptMetrics(a).score;
+                  return `
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem">
+                      ${regularCard(a, lec, pct)}
+                      ${retestPanel(a, lec, pct)}
+                    </div>`;
+                }).join('')}
               </div>
-              ${detail}
-            </div>`;
-        }).join('')}
+            </div>`).join('')}
       </div>`;
 
+    renderMath();
     flushPendingDraws();
   }
 
@@ -878,8 +985,47 @@
   }
 
   function getLatestAttempt(lectureId) {
-    const arr = getAttemptsForLecture(lectureId);
+    // 이어서 풀기는 정규 시도만 기준으로 한다 (재시험 제외)
+    const arr = getAttemptsForLecture(lectureId).filter(a => !a.isWrongAnswerTest);
     return arr.length ? arr[arr.length - 1] : null;
+  }
+
+  // 구두테스트 재시험 시작 (선생님 전용) — 원본에서 틀린 문제만 임시 강의로 구성
+  function startRetest(origDate, round) {
+    if (state.userType !== 'admin') return;
+    const docId = state.selectedStudent ? state.selectedStudent.id : `${state.studentName}_${state.phone}`;
+    const attempts = state.allStudentData[docId]?.attempts || [];
+    const orig = attempts.find(a => a.date === origDate);
+    if (!orig) return;
+    const origLec = lectures.find(l => l.id === orig.lectureId);
+    if (!origLec) return;
+    const wrong = [];
+    origLec.questions.forEach((q, i) => {
+      const ans = orig.answers ? orig.answers[i] : undefined;
+      if (ans !== undefined && ans !== q.answer) wrong.push(i);
+    });
+    if (wrong.length === 0) return;
+    state.selectedLecture = {
+      id: origLec.id,
+      name: origLec.name + ' 재시험 ' + round + '회차',
+      _origName: origLec.name,
+      questions: wrong.map(i => origLec.questions[i]),
+      _isRetest: true,
+      _retestOf: origDate,
+      _retestRound: round,
+      _questionIndices: wrong,
+    };
+    state.answers = {};
+    state.questionStrokes = {};
+    state.questionTimes = {};
+    state.lockedAnswers = {};
+    state.canvasStrokes = [];
+    state.quizCompleted = false;
+    state.currentQuestion = 0;
+    state.showRecords = false;
+    resetTimer();
+    render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
   }
 
   function firstUnansweredIndex(lec) {
@@ -929,7 +1075,7 @@
     const progress = total > 0 ? Math.round(answeredCount / total * 100) : 0;           // 진행률(푼 수/전체)
     const attempt = {
       lectureId: lec.id,
-      lectureName: lec.name,
+      lectureName: lec._isRetest ? lec._origName : lec.name,
       date: new Date().toISOString(),
       correct,
       answered: answeredCount,
@@ -940,6 +1086,11 @@
       answers: state.answers,
       questionTimes: state.questionTimes,
       questionStrokes: state.questionStrokes,
+      // 구두테스트 재시험 연결 정보
+      isWrongAnswerTest: !!lec._isRetest,
+      wrongAnswerAttemptId: lec._isRetest ? lec._retestOf : null,
+      retestRound: lec._isRetest ? lec._retestRound : null,
+      questionIndices: lec._isRetest ? lec._questionIndices : null,
       // 구버전 호환 필드
       total: answeredCount,
       percentage: score,
