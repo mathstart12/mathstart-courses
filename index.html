@@ -311,6 +311,8 @@
     let selectedStudentId = null;
     let selectedStudentName = null;
     let allStudents = [];
+    let currentTeacher = null;      // null = 전체 학생, 그 외 = 담당 선생님 이름
+    let currentStatus = 'active';   // 'active'(재원생) | 'withdrawn'(퇴원생)
 
     function renderCourseGrid(subTitle) {
       const content = document.getElementById('app-content');
@@ -332,32 +334,75 @@
       selectedStudentId = null;
       selectedStudentName = null;
       const content = document.getElementById('app-content');
+      // 담당 선생님 카테고리(전체 + 학생들의 teacherName 목록)
+      const teachers = [...new Set(allStudents.map(s => s.teacherName).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+      const chip = (label, val) => `<button onclick="setTeacher(${val===null?'null':`'${val}'`})" style="padding:0.4rem 0.9rem;border-radius:999px;border:1px solid ${currentTeacher===val?'#f97316':'#374151'};background:${currentTeacher===val?'rgba(249,115,22,0.15)':'#1a1a2e'};color:${currentTeacher===val?'#fb923c':'#9ca3af'};font-family:inherit;font-size:0.82rem;font-weight:700;cursor:pointer">${label}</button>`;
+      const cats = [chip('전체 학생', null), ...teachers.map(t => chip(t+' 선생님', t))].join('');
+      const inT = allStudents.filter(s => currentTeacher===null || s.teacherName===currentTeacher);
+      const nA = inT.filter(s=>s.status!=='withdrawn').length;
+      const nW = inT.filter(s=>s.status==='withdrawn').length;
+      const tab = (label,val,n) => `<button onclick="setStatus('${val}')" style="padding:0.5rem 1.1rem;border-radius:0.6rem;border:none;background:${currentStatus===val?(val==='active'?'#10b981':'#6b7280'):'#1f2937'};color:${currentStatus===val?'#fff':'#9ca3af'};font-family:inherit;font-size:0.85rem;font-weight:700;cursor:pointer">${label} (${n})</button>`;
       content.innerHTML = `
-        <div style="margin-bottom:1.5rem">
-          <input id="studentSearch" class="input-field" type="text" placeholder="학생 이름 검색..." oninput="filterStudents()" style="margin-bottom:0"/>
-        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem">${cats}</div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1rem">${tab('재원생','active',nA)}${tab('퇴원생','withdrawn',nW)}</div>
+        <div style="margin-bottom:1.25rem"><input id="studentSearch" class="input-field" type="text" placeholder="학생 이름 검색..." oninput="filterStudents()" style="margin-bottom:0"/></div>
         <div id="studentGrid" class="courses"></div>`;
-      renderStudentGrid(allStudents);
+      filterStudents();
+    }
+
+    function currentStudents() {
+      return allStudents.filter(s =>
+        (currentTeacher===null || s.teacherName===currentTeacher) &&
+        (currentStatus==='withdrawn' ? s.status==='withdrawn' : s.status!=='withdrawn'));
     }
 
     function filterStudents() {
-      const q = document.getElementById('studentSearch').value.trim().toLowerCase();
-      const filtered = q ? allStudents.filter(s => s.name.toLowerCase().includes(q)) : allStudents;
-      renderStudentGrid(filtered);
+      const el = document.getElementById('studentSearch');
+      const q = el ? el.value.trim().toLowerCase() : '';
+      renderStudentGrid(currentStudents().filter(s => !q || s.name.toLowerCase().includes(q)));
+    }
+
+    function setTeacher(t) { currentTeacher = t; renderStudentList(); }
+    function setStatus(st) { currentStatus = st; renderStudentList(); }
+
+    async function withdrawStudent(id) {
+      const s = allStudents.find(x=>x.id===id);
+      if (!confirm(`'${s?s.name:''}' 학생을 퇴원 처리할까요? (퇴원생 탭으로 이동합니다)`)) return;
+      try {
+        await db.collection('oral-test-students').doc(id).set({ status:'withdrawn' }, { merge:true });
+        if (s) s.status='withdrawn';
+        renderStudentList();
+      } catch(e) { alert('퇴원 처리 중 오류가 발생했습니다.'); }
+    }
+
+    async function restoreStudent(id) {
+      const s = allStudents.find(x=>x.id===id);
+      try {
+        await db.collection('oral-test-students').doc(id).set({ status:'active' }, { merge:true });
+        if (s) s.status='active';
+        renderStudentList();
+      } catch(e) { alert('복원 중 오류가 발생했습니다.'); }
     }
 
     function renderStudentGrid(students) {
       const grid = document.getElementById('studentGrid');
+      if (!grid) return;
       if (!students.length) {
-        grid.innerHTML = '<p style="color:#6b7280;font-size:0.9rem">검색 결과가 없습니다.</p>';
+        grid.innerHTML = '<p style="color:#6b7280;font-size:0.9rem">해당하는 학생이 없습니다.</p>';
         return;
       }
-      grid.innerHTML = students.map(s => `
-        <div class="course-card card-algebra" onclick="selectStudent('${s.id}','${s.name}')" style="cursor:pointer">
+      grid.innerHTML = students.map(s => {
+        const isW = s.status==='withdrawn';
+        const actionBtn = isW
+          ? `<button onclick="event.stopPropagation();restoreStudent('${s.id}')" style="margin-top:0.75rem;padding:0.4rem 0.75rem;border-radius:0.5rem;border:1px solid #10b981;background:rgba(16,185,129,0.12);color:#34d399;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer">↩ 재원 복원</button>`
+          : `<button onclick="event.stopPropagation();withdrawStudent('${s.id}')" style="margin-top:0.75rem;padding:0.4rem 0.75rem;border-radius:0.5rem;border:1px solid #4b5563;background:#1f2937;color:#9ca3af;font-family:inherit;font-size:0.75rem;font-weight:700;cursor:pointer">🚪 퇴원 처리</button>`;
+        return `
+        <div class="course-card card-algebra" onclick="selectStudent('${s.id}','${s.name}')" style="cursor:pointer;${isW?'opacity:0.6':''}">
           <h2 style="font-size:1.1rem">${s.name}</h2>
-          <p style="font-size:0.8rem;color:#6b7280;margin-top:0.4rem">${s.phone || ''}</p>
-          <div class="arrow">→</div>
-        </div>`).join('');
+          <p style="font-size:0.8rem;color:#6b7280;margin-top:0.4rem">${s.phone || ''}${s.teacherName?` · ${s.teacherName} 선생님`:''}</p>
+          ${actionBtn}
+        </div>`;
+      }).join('');
     }
 
     function selectStudent(id, name) {
@@ -372,12 +417,17 @@
         allStudents = [];
         snap.forEach(doc => {
           const d = doc.data();
-          // 관리자(선생님) 문서 제외, 퇴원생 제외
+          // 관리자(선생님) 문서만 제외 — 재원생·퇴원생 모두 불러온다
           if (d.isAdmin === true) return;
-          if (d.status === 'withdrawn') return;
           const name = d.studentName || '';
           if (!name) return; // 이름 없는 문서 제외
-          allStudents.push({ id: doc.id, name, phone: d.phone || '' });
+          allStudents.push({
+            id: doc.id,
+            name,
+            phone: d.phone || '',
+            teacherName: d.teacherName || '',
+            status: d.status === 'withdrawn' ? 'withdrawn' : 'active'
+          });
         });
         allStudents.sort((a,b) => a.name.localeCompare(b.name, 'ko'));
       } catch(e) {
