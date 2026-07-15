@@ -158,6 +158,11 @@
       <div id="student-form">
         <input class="input-field" id="studentName" type="text" placeholder="이름" />
         <input class="input-field" id="studentPhone" type="tel" placeholder="전화번호 (- 없이, 예: 01012345678)" />
+        <input class="input-field hidden" id="studentTeacher" type="text" placeholder="담당 선생님 성함 (신규 등록 시)" />
+        <label style="display:flex;align-items:center;gap:0.5rem;color:#9ca3af;font-size:0.85rem;margin:-0.35rem 0 0.9rem;cursor:pointer">
+          <input type="checkbox" id="newStudentCheck" onchange="toggleNewStudent()" style="width:1.05rem;height:1.05rem;cursor:pointer;accent-color:#f97316" />
+          처음 등록하는 학생입니다
+        </label>
         <button class="btn-primary" id="studentLoginBtn" onclick="loginStudent()">로그인</button>
       </div>
 
@@ -166,6 +171,7 @@
         <input class="input-field" id="teacherName" type="text" placeholder="이름" />
         <input class="input-field" id="teacherPw" type="password" placeholder="선생님 코드" />
         <button class="btn-primary" onclick="loginTeacher()">로그인</button>
+        <button onclick="registerTeacher()" style="width:100%;margin-top:0.65rem;padding:0.9rem;background:#1f2937;border:1px solid #374151;border-radius:0.75rem;color:#e5e7eb;font-family:inherit;font-weight:700;font-size:0.95rem;cursor:pointer">선생님 등록</button>
       </div>
 
       <p id="login-error" class="error-msg hidden"></p>
@@ -223,18 +229,34 @@
     async function loginStudent() {
       const name = document.getElementById('studentName').value.trim();
       const phone = document.getElementById('studentPhone').value.replace(/[^0-9]/g, '');
+      const isNew = document.getElementById('newStudentCheck').checked;
+      const teacher = document.getElementById('studentTeacher').value.trim();
       if (!name) { showError('이름을 입력해주세요'); return; }
       if (phone.length < 10) { showError('전화번호를 올바르게 입력해주세요'); return; }
+      if (isNew && !teacher) { showError('담당 선생님 성함을 입력해주세요'); return; }
 
       const btn = document.getElementById('studentLoginBtn');
       btn.disabled = true;
-      btn.textContent = '확인 중...';
+      btn.textContent = isNew ? '등록 중...' : '확인 중...';
 
       try {
-        const doc = await db.collection('oral-test-students').doc(`${name}_${phone}`).get();
-        if (!doc.exists) {
-          showError('등록된 학생 정보가 없습니다. 이름과 전화번호를 확인해주세요.');
-          return;
+        const ref = db.collection('oral-test-students').doc(`${name}_${phone}`);
+        const doc = await ref.get();
+        if (isNew) {
+          if (doc.exists && doc.data().status !== 'withdrawn') {
+            showError('이미 등록된 학생입니다. 체크를 해제하고 로그인해주세요.');
+            return;
+          }
+          await ref.set({ studentName: name, phone, teacherName: teacher, status: 'active', registeredAt: new Date().toISOString() }, { merge: true });
+        } else {
+          if (!doc.exists) {
+            showError('등록된 학생 정보가 없습니다. 신규라면 "처음 등록하는 학생입니다"를 체크해주세요.');
+            return;
+          }
+          if (doc.data().status === 'withdrawn') {
+            showError('퇴원 처리된 학생입니다. 담당 선생님께 문의해주세요.');
+            return;
+          }
         }
         localStorage.setItem('mathstart_user', JSON.stringify({ role: 'student', name, phone }));
         showApp(`${name} 학생`, 'student');
@@ -242,7 +264,7 @@
         showError('오류가 발생했습니다. 다시 시도해주세요.');
       } finally {
         btn.disabled = false;
-        btn.textContent = '로그인';
+        btn.textContent = isNew ? '등록하고 시작' : '로그인';
       }
     }
 
@@ -251,6 +273,29 @@
       const pw = document.getElementById('teacherPw').value;
       if (!name) { showError('이름을 입력해주세요'); return; }
       if (pw !== ADMIN_PASSWORD) { showError('선생님 코드가 올바르지 않습니다'); return; }
+      localStorage.setItem('mathstart_user', JSON.stringify({ role: 'admin', name }));
+      showApp(`${name} 선생님`, 'admin');
+    }
+
+    // 신규 학생 등록 토글 (담당 선생님 입력란 표시)
+    function toggleNewStudent() {
+      const on = document.getElementById('newStudentCheck').checked;
+      document.getElementById('studentTeacher').classList.toggle('hidden', !on);
+      document.getElementById('studentLoginBtn').textContent = on ? '등록하고 시작' : '로그인';
+    }
+
+    // 선생님 등록 (선생님 코드 확인 후 관리자 문서 생성)
+    async function registerTeacher() {
+      const name = document.getElementById('teacherName').value.trim();
+      const pw = document.getElementById('teacherPw').value;
+      if (!name) { showError('이름을 입력해주세요'); return; }
+      if (pw !== ADMIN_PASSWORD) { showError('선생님 코드가 올바르지 않습니다'); return; }
+      try {
+        await db.collection('oral-test-students').doc(`admin_${name}`).set({ name, isAdmin: true, registeredAt: new Date().toISOString() }, { merge: true });
+      } catch(e) {
+        showError('등록 중 오류가 발생했습니다. 다시 시도해주세요.');
+        return;
+      }
       localStorage.setItem('mathstart_user', JSON.stringify({ role: 'admin', name }));
       showApp(`${name} 선생님`, 'admin');
     }
