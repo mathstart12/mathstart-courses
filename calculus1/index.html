@@ -351,6 +351,14 @@
     lockedAnswers: {},      // { questionIdx: true } 이미 제출된(채점된) 문제 → 수정 불가
     questionStrokes: {},    // { questionIdx: { strokes:[{p:[x,y,...],c,w}], w, h } }
     _draw: [],              // 렌더 후 그릴 캔버스 목록 { id, data }
+    // 실시간 공유 화이트보드
+    live: {
+      enabled: false, role: null, roomId: null,
+      raw: [], otherName: '',
+      unsubStrokes: null, unsubRoom: null,
+      hbInterval: null, presenceTimer: null,
+      _otherSeen: null, _otherHeard: null,
+    },
   };
 
   // ────────────────────────────────────────────────
@@ -455,7 +463,8 @@
     ctx.lineJoin = 'round';
     state.currentCanvas = canvas;
     setupCanvasEvents(id);
-    redrawCanvas();
+    if (state.live.enabled) liveRebuild();  // 공유 보드: 정규화 좌표를 현재 폭에 맞춰 복원
+    else redrawCanvas();
   }
 
   function redrawCanvas() {
@@ -510,7 +519,11 @@
       isDrawing = true;
       if (state.isEraserMode) {
         const i = findStrokeAtPoint(c.x, c.y);
-        if (i !== -1) { state.canvasStrokes.splice(i, 1); redrawCanvas(); }
+        if (i !== -1) {
+          const st = state.canvasStrokes[i];
+          if (state.live.enabled && st && st._id) liveDeleteStroke(st._id);
+          state.canvasStrokes.splice(i, 1); redrawCanvas();
+        }
       } else {
         currentStroke = { points: [c], color: state.penColor, width: state.penSize };
       }
@@ -522,7 +535,11 @@
       const c = getCoords(e);
       if (state.isEraserMode) {
         const i = findStrokeAtPoint(c.x, c.y);
-        if (i !== -1) { state.canvasStrokes.splice(i, 1); redrawCanvas(); }
+        if (i !== -1) {
+          const st = state.canvasStrokes[i];
+          if (state.live.enabled && st && st._id) liveDeleteStroke(st._id);
+          state.canvasStrokes.splice(i, 1); redrawCanvas();
+        }
       } else {
         currentStroke.points.push(c);
         const prev = currentStroke.points[currentStroke.points.length - 2];
@@ -537,7 +554,8 @@
       if (!isDrawing) return;
       isDrawing = false;
       if (!state.isEraserMode && currentStroke && currentStroke.points.length > 0) {
-        state.canvasStrokes.push(currentStroke);
+        if (state.live.enabled) liveWriteStroke(currentStroke);  // 공유: 서버에 쓰면 스냅샷으로 양측에 반영
+        else state.canvasStrokes.push(currentStroke);
       }
       currentStroke = null;
     };
@@ -698,6 +716,244 @@
     }, 60);
   }
 
+  // ────────────────────────────────────────────────
+  // 실시간 공유 화이트보드 (LIVE) — 선생님·학생이 같은 보드를 동시에 사용
+  //  · 방(room) = 학생 문서ID.  컬렉션 'live-boards/{roomId}'
+  //  · 획(stroke) = 서브컬렉션 'strokes' 의 문서 (좌표는 0~10000 정규화 → 기기 폭 달라도 정렬)
+  //  · 접속표시(presence) = 상대의 lastSeen 갱신이 최근에 들어왔는지로 판단 (시계 오차 무관)
+  //  · 기존 '필기본 저장'(questionStrokes → calc1Attempts)은 그대로 유지됨
+  // ────────────────────────────────────────────────
+  const LIVE_H = 320;                 // 캔버스 높이(px) — 전 기기 동일
+  const LIVE_PRESENCE_TTL = 12000;    // 이 시간(ms) 안에 하트비트 없으면 OFF
+  const LIVE_HEARTBEAT_MS = 4000;
+
+  function liveRoomRef() { return db.collection('live-boards').doc(state.live.roomId); }
+  function liveStrokesRef() { return liveRoomRef().collection('strokes'); }
+  function liveBoardW() {
+    const c = state.currentCanvas;
+    if (c) { const w = c.getBoundingClientRect().width; if (w > 0) return w; }
+    return 350;
+  }
+
+  // 로컬 획(px) → 정규화 좌표 flat 배열
+  function liveEncodeStroke(stroke) {
+    const W = liveBoardW();
+    const p = [];
+    for (const pt of stroke.points) {
+      p.push(Math.round(pt.x / W * 10000), Math.round(pt.y / LIVE_H * 10000));
+    }
+    return p;
+  }
+  // 정규화 좌표 → 현재 기기 px 로 복원해 state.canvasStrokes 재구성 후 다시 그림
+  function liveRebuild() {
+    if (!state.currentCanvas) return;
+    const W = liveBoardW();
+    state.canvasStrokes = (state.live.raw || []).map(r => {
+      const points = [];
+      for (let i = 0; i + 1 < r.p.length; i += 2) {
+        points.push({ x: r.p[i] / 10000 * W, y: r.p[i + 1] / 10000 * LIVE_H });
+      }
+      return { points, color: r.c || '#000000', width: r.w || 3, _id: r._id };
+    });
+    redrawCanvas();
+  }
+
+  function liveWriteStroke(stroke) {
+    if (!state.live.enabled || !stroke || stroke.points.length < 1) return;
+    const doc = {
+      q: state.currentQuestion,
+      by: state.live.role,
+      c: stroke.color,
+      w: stroke.width,
+      p: liveEncodeStroke(stroke),
+      ord: Date.now(),
+    };
+    liveStrokesRef().add(doc).catch(e => console.warn('LIVE 획 저장 실패:', e));
+  }
+  function liveDeleteStroke(id) {
+    if (!id) return;
+    liveStrokesRef().doc(id).delete().catch(() => {});
+  }
+  async function liveClearQuestion(idx) {
+    try {
+      const snap = await liveStrokesRef().where('q', '==', idx).get();
+      const batch = db.batch();
+      snap.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    } catch (e) { console.warn('LIVE 전체지우기 실패:', e); }
+  }
+  async function liveClearAllStrokes() {
+    try {
+      const snap = await liveStrokesRef().get();
+      const batch = db.batch();
+      snap.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    } catch (e) {}
+  }
+
+  // 현재 문제의 획만 실시간 구독
+  function liveSubscribeStrokes() {
+    if (state.live.unsubStrokes) { state.live.unsubStrokes(); state.live.unsubStrokes = null; }
+    const idx = state.currentQuestion;
+    state.live.unsubStrokes = liveStrokesRef().where('q', '==', idx).onSnapshot(snap => {
+      const arr = [];
+      snap.forEach(d => { const x = d.data(); arr.push({ p: x.p || [], c: x.c, w: x.w, _id: d.id, ord: x.ord || 0 }); });
+      arr.sort((a, b) => a.ord - b.ord);
+      state.live.raw = arr;
+      liveRebuild();
+    }, e => console.warn('LIVE 획 구독 오류:', e));
+  }
+
+  // 하트비트(접속 유지) 전송
+  function liveStartHeartbeat() {
+    liveSendBeat();
+    if (state.live.hbInterval) clearInterval(state.live.hbInterval);
+    state.live.hbInterval = setInterval(liveSendBeat, LIVE_HEARTBEAT_MS);
+    if (state.live.presenceTimer) clearInterval(state.live.presenceTimer);
+    state.live.presenceTimer = setInterval(updatePresenceBadge, 3000);
+  }
+  function liveSendBeat() {
+    if (!state.live.enabled) return;
+    const me = state.live.role;
+    const name = me === 'teacher' ? state.adminName : state.studentName;
+    const patch = {}; patch[me] = { name, lastSeen: Date.now(), online: true };
+    liveRoomRef().set(patch, { merge: true }).catch(() => {});
+  }
+  function liveStopHeartbeat() {
+    if (state.live.hbInterval) { clearInterval(state.live.hbInterval); state.live.hbInterval = null; }
+    if (state.live.presenceTimer) { clearInterval(state.live.presenceTimer); state.live.presenceTimer = null; }
+  }
+
+  // 방 문서 구독 — 상대 접속표시 + (학생) 문제이동/세션종료 따라가기
+  function liveSubscribeRoom() {
+    if (state.live.unsubRoom) { state.live.unsubRoom(); state.live.unsubRoom = null; }
+    state.live.unsubRoom = liveRoomRef().onSnapshot(docSnap => {
+      const d = docSnap.data() || {};
+      const otherKey = state.live.role === 'teacher' ? 'student' : 'teacher';
+      const other = d[otherKey] || {};
+      // 상대 lastSeen 이 새로 갱신됐으면 '방금 들었음' 시각을 로컬 기준으로 기록 (시계오차 무관)
+      if (other.lastSeen && other.lastSeen !== state.live._otherSeen) {
+        state.live._otherSeen = other.lastSeen;
+        state.live._otherHeard = Date.now();
+      }
+      state.live.otherName = other.name || state.live.otherName || '';
+      updatePresenceBadge();
+
+      if (state.live.role === 'student') {
+        if (d.active === false) { studentLeaveLive(); return; }
+        if (typeof d.currentQuestion === 'number' && d.currentQuestion !== state.currentQuestion) {
+          state.currentQuestion = d.currentQuestion;
+          liveSubscribeStrokes();
+          render();
+        }
+      }
+    }, e => console.warn('LIVE 방 구독 오류:', e));
+  }
+
+  function liveOtherOnline() {
+    return state.live._otherHeard && (Date.now() - state.live._otherHeard) < LIVE_PRESENCE_TTL;
+  }
+  function updatePresenceBadge() {
+    const el = document.getElementById('presenceBadge');
+    if (!el) return;
+    const on = liveOtherOnline();
+    const label = state.live.role === 'teacher'
+      ? `${state.live.otherName || '학생'} 학생`
+      : `${state.live.otherName || '선생님'} 선생님`;
+    el.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${on ? '#22c55e' : '#6b7280'};box-shadow:${on ? '0 0 6px #22c55e' : 'none'};display:inline-block"></span>`
+      + `<span style="color:${on ? '#22c55e' : '#9ca3af'}">${label} ${on ? 'ON' : 'OFF'}</span>`;
+  }
+
+  // 선생님: 강의 시작 시 세션 열기. 성공 시 true, (권한/네트워크 실패 시) false → 기존 로컬 방식으로 폴백
+  async function liveOpenSession(roomId, lec) {
+    state.live.role = 'teacher';
+    state.live.roomId = roomId;
+    state.live.raw = [];
+    state.live._otherSeen = null; state.live._otherHeard = null;
+    try {
+      // 이 set() 이 곧 쓰기권한 확인. 실패하면 실시간 공유는 끄고 기존 방식 유지.
+      await liveRoomRef().set({
+        active: true,
+        lectureId: lec.id,
+        lectureName: lec.name,
+        currentQuestion: state.currentQuestion,
+        teacher: { name: state.adminName, lastSeen: Date.now(), online: true },
+        student: { name: state.selectedStudent ? (state.selectedStudent.studentName || '') : '', lastSeen: 0, online: false },
+        updatedAt: Date.now(),
+      }, { merge: true });
+    } catch (e) {
+      console.warn('LIVE 세션 열기 실패 → 로컬 필기 모드로 진행:', e);
+      state.live.enabled = false;
+      return false;
+    }
+    state.live.enabled = true;
+    await liveClearAllStrokes();  // 이전 세션 잔여 획 정리
+    liveStartHeartbeat();
+    liveSubscribeRoom();
+    liveSubscribeStrokes();
+    return true;
+  }
+  // 선생님: 문제 이동 시 방에 반영
+  function liveSetQuestion(idx) {
+    if (!state.live.enabled) return;
+    liveRoomRef().set({ currentQuestion: idx, updatedAt: Date.now() }, { merge: true }).catch(() => {});
+    liveSubscribeStrokes();
+  }
+  // 세션 종료(선생님) — 방 비활성화 + 정리
+  async function liveCloseSession() {
+    if (!state.live.enabled) return;
+    const wasTeacher = state.live.role === 'teacher';
+    liveStopHeartbeat();
+    if (state.live.unsubStrokes) { state.live.unsubStrokes(); state.live.unsubStrokes = null; }
+    if (state.live.unsubRoom) { state.live.unsubRoom(); state.live.unsubRoom = null; }
+    if (wasTeacher) {
+      try { await liveRoomRef().set({ active: false, updatedAt: Date.now() }, { merge: true }); } catch (e) {}
+      liveClearAllStrokes();
+    }
+    state.live.enabled = false;
+    state.live.raw = [];
+  }
+
+  // 학생: 자기 방을 상시 구독 → 선생님이 세션 열면 자동 합류
+  function studentListenForLive() {
+    const roomId = `${state.studentName}_${state.phone}`;
+    state.live.roomId = roomId;
+    state.live.role = 'student';
+    db.collection('live-boards').doc(roomId).onSnapshot(docSnap => {
+      const d = docSnap.data();
+      if (!d) return;
+      if (d.active && !state.live.enabled) { studentJoinLive(d); }
+    }, e => console.warn('LIVE 학생 감지 오류:', e));
+  }
+  function studentJoinLive(d) {
+    const lec = lectures.find(l => l.id === d.lectureId);
+    if (!lec || lec.questions.length === 0) return;
+    state.live.enabled = true;
+    state.live.role = 'student';
+    state.live.raw = [];
+    state.live._otherSeen = null; state.live._otherHeard = null;
+    state.selectedLecture = lec;
+    state.quizCompleted = false;
+    state.currentQuestion = typeof d.currentQuestion === 'number' ? d.currentQuestion : 0;
+    state.answers = {}; state.lockedAnswers = {}; state.questionStrokes = {}; state.questionTimes = {};
+    liveStartHeartbeat();
+    liveSubscribeRoom();
+    liveSubscribeStrokes();
+    render();
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function studentLeaveLive() {
+    liveStopHeartbeat();
+    if (state.live.unsubStrokes) { state.live.unsubStrokes(); state.live.unsubStrokes = null; }
+    if (state.live.unsubRoom) { state.live.unsubRoom(); state.live.unsubRoom = null; }
+    state.live.enabled = false;
+    state.live.raw = [];
+    state.selectedLecture = null;
+    state.quizCompleted = false;
+    state.canvasStrokes = [];
+    render();
+  }
+
   function renderQuiz() {
     const lec = state.selectedLecture;
     const q = lec.questions[state.currentQuestion];
@@ -707,13 +963,22 @@
     const answeredCount = Object.keys(state.answers).length;
     const locked = !!state.lockedAnswers[idx];
     const isAdmin = state.userType === 'admin';
+    const isStudent = !isAdmin;
+    const live = state.live.enabled;
 
     const app = document.getElementById('app');
     app.innerHTML = `
       ${headerHTML(isAdmin ? state.adminName : state.studentName, state.userType)}
       <div style="max-width:900px;margin:0 auto;padding:1.5rem">
-        <!-- 강의 목록으로 돌아가기 -->
-        <button onclick="exitQuiz()" style="margin-bottom:0.9rem;display:inline-flex;align-items:center;gap:0.4rem;background:none;border:none;color:#10b981;font-size:0.85rem;font-family:inherit;font-weight:700;cursor:pointer;padding:0">← 강의 목록으로</button>
+        <!-- 상단 바: (선생님) 강의목록 이동 / 실시간 접속표시 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;margin-bottom:0.9rem">
+          ${isStudent
+            ? `<span style="display:inline-flex;align-items:center;gap:0.4rem;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35);border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;color:#818cf8;font-weight:700">🔴 선생님과 실시간 진행 중</span>`
+            : `<button onclick="exitQuiz()" style="display:inline-flex;align-items:center;gap:0.4rem;background:none;border:none;color:#10b981;font-size:0.85rem;font-family:inherit;font-weight:700;cursor:pointer;padding:0">← 강의 목록으로</button>`}
+          ${live
+            ? `<span id="presenceBadge" style="display:inline-flex;align-items:center;gap:0.4rem;background:#141428;border:1px solid #1f2f3f;border-radius:999px;padding:0.3rem 0.85rem;font-size:0.8rem;font-weight:700"><span style="width:8px;height:8px;border-radius:50%;background:#6b7280;display:inline-block"></span><span style="color:#9ca3af">연결 대기…</span></span>`
+            : ''}
+        </div>
 
         <!-- 진행 상황 -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
@@ -721,12 +986,12 @@
             ${lec.name} — 문제 ${idx + 1} / ${total}
           </span>
           <div style="display:flex;align-items:center;gap:0.75rem">
-            <div style="background:#1e3a5f;border-radius:999px;padding:0.3rem 0.9rem;font-size:0.9rem;font-weight:800;color:#60a5fa" id="timerDisplay">
+            ${!isStudent ? `<div style="background:#1e3a5f;border-radius:999px;padding:0.3rem 0.9rem;font-size:0.9rem;font-weight:800;color:#60a5fa" id="timerDisplay">
               ⏱ ${formatTime(state.questionElapsed)}
-            </div>
-            <button onclick="toggleTimer()" id="timerBtn" style="padding:0.3rem 0.85rem;border-radius:999px;font-size:0.8rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:${state.timerRunning ? '#dc2626' : '#16a34a'};color:#fff">
+            </div>` : ''}
+            ${!isStudent ? `<button onclick="toggleTimer()" id="timerBtn" style="padding:0.3rem 0.85rem;border-radius:999px;font-size:0.8rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:${state.timerRunning ? '#dc2626' : '#16a34a'};color:#fff">
               ${state.timerRunning ? '■ 정지' : '▶ 시작'}
-            </button>
+            </button>` : ''}
           </div>
         </div>
 
@@ -742,7 +1007,7 @@
             <div style="display:flex;align-items:center;gap:0.5rem">
               <button id="penBtn" onclick="setEraserMode(false)" style="padding:0.3rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:${!state.isEraserMode ? '#f97316' : '#374151'};color:#fff">✏ 펜</button>
               <button id="eraserBtn" onclick="setEraserMode(true)" style="padding:0.3rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:${state.isEraserMode ? '#f97316' : '#374151'};color:#fff">✂ 지우개</button>
-              <button onclick="state.canvasStrokes=[];redrawCanvas()" style="padding:0.3rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:#374151;color:#fff">🗑 전체 지우기</button>
+              <button onclick="clearBoard()" style="padding:0.3rem 0.75rem;border-radius:0.5rem;font-size:0.75rem;font-family:inherit;font-weight:700;border:none;cursor:pointer;background:#374151;color:#fff">🗑 전체 지우기</button>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.6rem">
@@ -758,6 +1023,12 @@
           <canvas id="quizCanvas" style="width:100%;height:320px;border-radius:0.75rem;display:block;cursor:crosshair"></canvas>
         </div>
 
+        ${isStudent ? `
+        <!-- 학생 안내 (채점·이동은 선생님이 진행) -->
+        <div style="text-align:center;font-size:0.8rem;margin-bottom:1.25rem;color:#6b7280;background:#141428;border:1px solid #1f2f3f;border-radius:0.875rem;padding:0.9rem">
+          선생님이 진행하는 구두테스트입니다 · 위 화이트보드에 함께 필기할 수 있어요
+        </div>
+        ` : `
         <!-- OX 버튼 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.5rem">
           <button ${locked?'':`onclick="handleAnswer('O')"`} style="padding:1.25rem;border-radius:1rem;font-size:1.5rem;font-weight:900;font-family:inherit;border:2px solid ${answered==='O'?'#10b981':'#374151'};background:${answered==='O'?'rgba(16,185,129,0.15)':'#141428'};color:${answered==='O'?'#10b981':'#9ca3af'};cursor:${locked?'default':'pointer'};opacity:${locked&&answered!=='O'?'0.35':'1'};transition:all 0.15s">O</button>
@@ -774,10 +1045,11 @@
         <!-- 제출하기 (항상 노출) -->
         <button onclick="finishQuiz()" ${answeredCount>=1?'':'disabled'} style="width:100%;padding:0.95rem;border-radius:0.875rem;font-size:0.95rem;font-weight:800;font-family:inherit;border:none;background:${answeredCount>=1?'linear-gradient(135deg,#f97316,#fb923c)':'#374151'};color:#fff;cursor:${answeredCount>=1?'pointer':'not-allowed'}">제출하기 (${answeredCount}/${total} 답변)</button>
         <p style="text-align:center;color:#4b5563;font-size:0.75rem;margin-top:0.6rem">지금까지 답변·필기한 내용으로 제출됩니다 · 최소 1문제 이상 답변 필요</p>
+        `}
       </div>`;
 
     renderMath();
-    setTimeout(() => initCanvas('quizCanvas'), 50);
+    setTimeout(() => { initCanvas('quizCanvas'); if (state.live.enabled) updatePresenceBadge(); }, 50);
   }
 
   function renderQuizResult() {
@@ -1048,7 +1320,7 @@
   // ────────────────────────────────────────────────
   // 이벤트 핸들러
   // ────────────────────────────────────────────────
-  function startLecture(id) {
+  async function startLecture(id) {
     if (state.userType === 'student') return; // 학생은 스스로 테스트를 시작할 수 없음 (선생님이 진행)
     const lec = lectures.find(l => l.id === id);
     if (!lec || lec.questions.length === 0) return;
@@ -1066,6 +1338,11 @@
     resetTimer();
     render();
     window.scrollTo({ top: 0, behavior: 'instant' });
+    // 실시간 공유 세션 열기 (선생님이 학생을 선택한 경우에만). 성공 시 공유 보드로 전환.
+    if (state.selectedStudent) {
+      const ok = await liveOpenSession(state.selectedStudent.id, lec);
+      if (ok) { state.canvasStrokes = []; render(); }
+    }
   }
 
   function handleAnswer(ans) {
@@ -1136,7 +1413,8 @@
       saveQuestionTime(state.currentQuestion);
       captureCurrentStrokes();
       state.currentQuestion++;
-      state.canvasStrokes = loadStrokesFor(state.currentQuestion);
+      if (state.live.enabled) { state.canvasStrokes = []; liveSetQuestion(state.currentQuestion); }
+      else state.canvasStrokes = loadStrokesFor(state.currentQuestion);
       resetTimer();
       render();
       window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1148,7 +1426,8 @@
       saveQuestionTime(state.currentQuestion);
       captureCurrentStrokes();
       state.currentQuestion--;
-      state.canvasStrokes = loadStrokesFor(state.currentQuestion);
+      if (state.live.enabled) { state.canvasStrokes = []; liveSetQuestion(state.currentQuestion); }
+      else state.canvasStrokes = loadStrokesFor(state.currentQuestion);
       resetTimer();
       render();
       window.scrollTo({ top: 0, behavior: 'instant' });
@@ -1192,6 +1471,7 @@
     };
 
     await saveAttempt(attempt);
+    await liveCloseSession();  // 필기본은 위에서 저장됨 → 공유 세션 종료
     // 제출한 답변은 모두 잠금(재풀이 불가) → 이어서 풀기 시 미답변만 풀 수 있음
     Object.keys(state.answers).forEach(k => { state.lockedAnswers[k] = true; });
     state.quizCompleted = true;
@@ -1200,6 +1480,7 @@
   }
 
   function backToLectureList() {
+    if (state.live.enabled) liveCloseSession();
     state.selectedLecture = null;
     state.quizCompleted = false;
     state.answers = {};
@@ -1240,6 +1521,12 @@
     }
   }
 
+  function clearBoard() {
+    if (state.live.enabled) { liveClearQuestion(state.currentQuestion); }
+    state.canvasStrokes = [];
+    redrawCanvas();
+  }
+
   function setEraserMode(on) {
     state.isEraserMode = on;
     const penBtn = document.getElementById('penBtn');
@@ -1258,6 +1545,7 @@
 
   function doLogout() {
     stopTimer();
+    if (state.live.enabled) liveCloseSession();
     localStorage.removeItem('ox_quiz_student_name');
     localStorage.removeItem('ox_quiz_student_phone');
     localStorage.removeItem('ox_quiz_auto_login');
@@ -1309,6 +1597,7 @@
       state.studentName = name;
       state.phone = phone;
       await loadStudentData(`${name}_${phone}`);
+      studentListenForLive();  // 선생님이 세션 열면 자동 합류
       render();
     } else {
       redirectToHome();
